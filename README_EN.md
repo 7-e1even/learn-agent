@@ -7,7 +7,7 @@
 
 Want to understand how coding agents like **Claude Code, Codex, opencode** actually work under the hood? This repo is my field notes from the potholes I hit building my own agent from scratch.
 
-> **What makes this different from other "build your own agent" tutorials**: the mechanisms here aren't imagined from API docs. They're ported (and simplified) from a **real, shipping desktop coding agent** ([Reina](https://github.com/7-e1even/Reina-release)) — **every error handler, every optimization, is a bug that was actually hit in production**.
+> **What makes this different from other "build your own agent" tutorials**: the mechanisms here aren't imagined from API docs. They're ported (and simplified) from a **real, shipping, fully open-source desktop coding agent** ([Reina](https://github.com/Reina-Agent/Reina)) — **every error handler, every optimization, is a bug that was actually hit in production**.
 
 ## What this is
 
@@ -46,6 +46,10 @@ The loop is written in lesson 1 and **barely changes after that** — every mech
 | [s13](./s13_permissions/) | Permissions & approval | Adjudicate dangerous ops before the side effect; allow/deny/ask, first match wins |
 | [s14](./s14_provider_compat/) | Provider compatibility layer | Models spew malformed tool calls (name/args/truncation/prose) — flatten it at the boundary |
 | [s15](./s15_tool_disclosure/) | Progressive tool disclosure | Too many tools blow up context; unshielding shouldn't re-inject the array or bust the cache |
+
+## The full implementation
+
+Want to see what these 15 lessons' mechanisms look like in a real product? The complete source lives at **[Reina](https://github.com/Reina-Agent/Reina)** — an open-source desktop AI agent (Electron + React + TypeScript). Every engine, compaction, caching, permission, and provider-compat mechanism referenced in the "how the real product does it" sections has its full implementation there.
 
 ## License
 

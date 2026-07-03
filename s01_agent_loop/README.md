@@ -148,7 +148,7 @@ while (true) {
 ## 真实产品对照
 
 - 这 120 行和 Claude Code 的主循环**在拓扑上是同一个东西**。真实产品多出来的几万行，都花在这个循环的"周边"：工具更多更可靠（s02）、不空转（s03）、上下文不爆（s04/s06）、便宜（s07）、断了能接上（s08）、能分身（s09）。循环本身，从 s01 到最后一章，一行都不会再改。
-- 桌面 agent [Reina](https://github.com/7-e1even/Reina-release) 的引擎（`runTurn`）也是这个循环。它的 system prompt 同样以 cwd + 平台开头——所有 agent 的"本体感"都长一样。
+- 桌面 agent [Reina](https://github.com/Reina-Agent/Reina) 的引擎（`runTurn`）也是这个循环。它的 system prompt 同样以 cwd + 平台开头——所有 agent 的"本体感"都长一样。
 
 ## 动手挑战
 

@@ -7,7 +7,7 @@
 
 想搞懂 **Claude Code、Codex、opencode** 这类 coding agent 内部到底怎么实现？这个仓库是我从 0 开发自己的 agent 时的踩坑笔记。
 
-> **和别的"手写 agent"教程不一样的地方**：这里的机制不是照着 API 文档想象的，而是从一个**真实在跑的桌面 coding agent 产品**（[Reina](https://github.com/7-e1even/Reina-release)）简化移植而来——**每一条报错、每一个机制优化，都是线上踩过的坑**。
+> **和别的"手写 agent"教程不一样的地方**：这里的机制不是照着 API 文档想象的，而是从一个**真实在跑、完整开源的桌面 coding agent 产品**（[Reina](https://github.com/Reina-Agent/Reina)）简化移植而来——**每一条报错、每一个机制优化，都是线上踩过的坑**。
 
 ## 笔记内容
 
@@ -46,6 +46,10 @@ AGENT_API_KEY=sk-xxx node s01_agent_loop/agent.mjs
 | [s13](./s13_permissions/) | 权限与审批 | 危险操作在副作用前裁决；allow/deny/ask 三态首匹配 |
 | [s14](./s14_provider_compat/) | Provider 兼容层 | 模型乱吐 tool call（名字/参数/截断/散文）在边界掰平 |
 | [s15](./s15_tool_disclosure/) | 渐进式工具披露 | 工具多了不撑爆上下文；解蔽别回灌数组、撞缓存 |
+
+## 完整实现
+
+这 15 课的机制在真实产品里长什么样？完整源码在 **[Reina](https://github.com/Reina-Agent/Reina)** —— 一个开源的桌面 AI agent（Electron + React + TypeScript）。每篇"真实产品对照"提到的引擎、压缩、缓存、权限、Provider 兼容层，都能在里面找到对应实现，欢迎对照阅读。
 
 ## License
 
