@@ -7,6 +7,7 @@
 ![零依赖](https://img.shields.io/badge/%E4%BE%9D%E8%B5%96-0-brightgreen)
 ![Node ≥ 18](https://img.shields.io/badge/node-%E2%89%A5%2018-339933?logo=node.js&logoColor=white)
 ![MIT](https://img.shields.io/badge/license-MIT-lightgrey)
+[![完整实现 · Reina](https://img.shields.io/badge/%E5%AE%8C%E6%95%B4%E5%AE%9E%E7%8E%B0-Reina-8A2BE2?logo=github)](https://github.com/Reina-Agent/Reina)
 
 > 一个 `while` 循环是 agent 的全部秘密——**但只够它活 5 分钟**。
 > 剩下的部分——让它在真实任务里活过 5 小时——就是这 15 篇笔记记的东西。
@@ -15,7 +16,9 @@
 
 ![15 套机制，最后都长回同一个循环上](./assets/s12-mechanism-map.svg)
 
-> **和别的"手写 agent"教程不一样的地方**：这里的机制不是照着 API 文档想象的，而是从一个**真实在跑、完整开源的桌面 coding agent 产品**（[Reina](https://github.com/Reina-Agent/Reina)）简化移植而来——**每一条报错、每一个机制优化，都是线上踩过的坑**。
+> [!IMPORTANT]
+> **和别的"手写 agent"教程不一样的地方**：这里的机制不是照着 API 文档想象的，而是从一个**真实在跑、完整开源的桌面 coding agent 产品**——**[Reina](https://github.com/Reina-Agent/Reina)**——简化移植而来，**每一条报错、每一个机制优化，都是线上踩过的坑**。
+> 学完这 15 篇想看生产级完整源码，直接去 👉 **[Reina-Agent/Reina](https://github.com/Reina-Agent/Reina)**
 
 ## 这份笔记适合你吗
 

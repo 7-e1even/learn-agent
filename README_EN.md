@@ -7,6 +7,7 @@
 ![zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![Node ≥ 18](https://img.shields.io/badge/node-%E2%89%A5%2018-339933?logo=node.js&logoColor=white)
 ![MIT](https://img.shields.io/badge/license-MIT-lightgrey)
+[![Full implementation · Reina](https://img.shields.io/badge/full_implementation-Reina-8A2BE2?logo=github)](https://github.com/Reina-Agent/Reina)
 
 > A single `while` loop is the whole secret of an agent — **but it only keeps it alive for 5 minutes**.
 > Everything else — what makes it survive 5 *hours* of real work — is what these 15 lessons are about.
@@ -15,7 +16,9 @@ Want to understand how coding agents like **Claude Code, Codex, opencode** actua
 
 ![15 mechanisms, all growing back onto the same loop](./assets/s12-mechanism-map.svg)
 
-> **What makes this different from other "build your own agent" tutorials**: the mechanisms here aren't imagined from API docs. They're ported (and simplified) from a **real, shipping, fully open-source desktop coding agent** ([Reina](https://github.com/Reina-Agent/Reina)) — **every error handler, every optimization, is a bug that was actually hit in production**.
+> [!IMPORTANT]
+> **What makes this different from other "build your own agent" tutorials**: the mechanisms here aren't imagined from API docs. They're ported (and simplified) from a **real, shipping, fully open-source desktop coding agent** — **[Reina](https://github.com/Reina-Agent/Reina)** — and **every error handler, every optimization, is a bug that was actually hit in production**.
+> Done with the 15 lessons and want the production-grade source? Go straight to 👉 **[Reina-Agent/Reina](https://github.com/Reina-Agent/Reina)**
 
 ## Is this for you
 
