@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="430" viewBox="0 0 920 430" role="img" aria-labelledby="title desc">
+  <title id="title">s06 compaction shape</title>
+  <desc id="desc">Compaction replaces old middle history with a summary while preserving the launch user message and recent tail verbatim.</desc>
+  <style>
+    .bg{fill:#f8fafc}.box{fill:#fff;stroke:#334155;stroke-width:2;rx:12}.sum{fill:#ede9fe}.keep{fill:#dcfce7}.tail{fill:#dbeafe}.drop{fill:#fee2e2}.label{font:700 22px Arial,"Microsoft YaHei",sans-serif;fill:#0f172a}.txt{font:16px Arial,"Microsoft YaHei",sans-serif;fill:#334155}.small{font:14px Arial,"Microsoft YaHei",sans-serif;fill:#475569}.arrow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+  </style>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker></defs>
+  <rect class="bg" width="920" height="430"/>
+  <text x="40" y="48" class="label">上下文压缩的形状：忘过程，别忘任务</text>
+  <text x="64" y="96" class="txt">压缩前</text>
+  <rect class="box drop" x="60" y="120" width="140" height="64"/><text x="130" y="157" text-anchor="middle" class="small">早期闲聊</text>
+  <rect class="box drop" x="210" y="120" width="140" height="64"/><text x="280" y="157" text-anchor="middle" class="small">旧工具往返</text>
+  <rect class="box keep" x="360" y="120" width="180" height="64"/><text x="450" y="145" text-anchor="middle" class="small">启动任务 user</text><text x="450" y="166" text-anchor="middle" class="small">逐字保留</text>
+  <rect class="box tail" x="550" y="120" width="140" height="64"/><text x="620" y="157" text-anchor="middle" class="small">最近工具</text>
+  <rect class="box tail" x="700" y="120" width="140" height="64"/><text x="770" y="157" text-anchor="middle" class="small">当前回答</text>
+  <path class="arrow" d="M450 196 V248"/>
+  <text x="64" y="284" class="txt">压缩后</text>
+  <rect class="box sum" x="120" y="308" width="260" height="68"/><text x="250" y="336" text-anchor="middle" class="small">结构化摘要</text><text x="250" y="358" text-anchor="middle" class="small">已完成 / 待办 / 文件 / 坑</text>
+  <rect class="box keep" x="400" y="308" width="190" height="68"/><text x="495" y="336" text-anchor="middle" class="small">启动消息原文</text><text x="495" y="358" text-anchor="middle" class="small">不要转述</text>
+  <rect class="box tail" x="610" y="308" width="230" height="68"/><text x="725" y="336" text-anchor="middle" class="small">最近尾部原样保留</text><text x="725" y="358" text-anchor="middle" class="small">不中断当前工作记忆</text>
+  <text x="460" y="414" text-anchor="middle" class="small">分割点回拉到最后一条真实用户消息；切口不能落在 tool 对中间</text>
+</svg>

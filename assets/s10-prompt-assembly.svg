@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="430" viewBox="0 0 920 430" role="img" aria-labelledby="title desc">
+  <title id="title">s10 prompt assembly</title>
+  <desc id="desc">System prompt is assembled from stable sections; skill bodies are loaded progressively with a load_skill tool.</desc>
+  <style>
+    .bg{fill:#f8fafc}.box{fill:#fff;stroke:#334155;stroke-width:2;rx:12}.stable{fill:#dcfce7}.skill{fill:#ede9fe}.tool{fill:#dbeafe}.volatile{fill:#fef3c7}.label{font:700 22px Arial,"Microsoft YaHei",sans-serif;fill:#0f172a}.txt{font:16px Arial,"Microsoft YaHei",sans-serif;fill:#334155}.small{font:14px Arial,"Microsoft YaHei",sans-serif;fill:#475569}.arrow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+  </style>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker></defs>
+  <rect class="bg" width="920" height="430"/>
+  <text x="40" y="48" class="label">System prompt：每轮拼装，正文按需加载</text>
+  <rect class="box stable" x="50" y="86" width="190" height="94"/><text x="145" y="120" text-anchor="middle" class="txt">稳定 sections</text><text x="145" y="146" text-anchor="middle" class="small">身份 / 环境 / 工具使用</text>
+  <rect class="box skill" x="280" y="86" width="190" height="94"/><text x="375" y="120" text-anchor="middle" class="txt">技能目录</text><text x="375" y="146" text-anchor="middle" class="small">name + description</text>
+  <rect class="box stable" x="510" y="86" width="190" height="94"/><text x="605" y="120" text-anchor="middle" class="txt">固定顺序</text><text x="605" y="146" text-anchor="middle" class="small">排序 + join</text>
+  <rect class="box stable" x="735" y="86" width="135" height="94"/><text x="802" y="120" text-anchor="middle" class="txt">system</text><text x="802" y="146" text-anchor="middle" class="small">字节稳定</text>
+  <path class="arrow" d="M240 133 H277"/><path class="arrow" d="M470 133 H507"/><path class="arrow" d="M700 133 H732"/>
+  <rect class="box volatile" x="70" y="256" width="230" height="86"/><text x="185" y="290" text-anchor="middle" class="txt">易变信息</text><text x="185" y="316" text-anchor="middle" class="small">时间 / 进度 / 提醒</text>
+  <rect class="box tool" x="360" y="256" width="210" height="86"/><text x="465" y="290" text-anchor="middle" class="txt">追加到尾部</text><text x="465" y="316" text-anchor="middle" class="small">不破坏缓存前缀</text>
+  <rect class="box skill" x="640" y="246" width="230" height="106"/><text x="755" y="282" text-anchor="middle" class="txt">load_skill(name)</text><text x="755" y="310" text-anchor="middle" class="small">相关时才读正文</text><text x="755" y="334" text-anchor="middle" class="small">少量常驻，多数按需</text>
+  <path class="arrow" d="M300 299 H357"/>
+  <text x="755" y="230" text-anchor="middle" class="small" fill="#7c3aed">另一条：正文不进前缀，按需取</text>
+</svg>

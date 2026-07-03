@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="430" viewBox="0 0 920 430" role="img" aria-labelledby="title desc">
+  <title id="title">s03 loop budget</title>
+  <desc id="desc">Loop budget extends when progress happens, pauses for recoverable abnormal behavior, and stops at hard limits.</desc>
+  <style>
+    .bg{fill:#f8fafc}.box{fill:#fff;stroke:#334155;stroke-width:2;rx:12}.good{fill:#dcfce7}.bad{fill:#fee2e2}.soft{fill:#dbeafe}.hard{fill:#fef3c7}.label{font:700 22px Arial,"Microsoft YaHei",sans-serif;fill:#0f172a}.txt{font:16px Arial,"Microsoft YaHei",sans-serif;fill:#334155}.small{font:14px Arial,"Microsoft YaHei",sans-serif;fill:#475569}.arrow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}.blue{stroke:#2563eb;stroke-width:3;fill:none;marker-end:url(#blue)}
+  </style>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker><marker id="blue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/></marker></defs>
+  <rect class="bg" width="920" height="430"/>
+  <text x="40" y="48" class="label">循环预算：先纠偏，再熔断</text>
+  <rect class="box soft" x="50" y="92" width="170" height="78"/><text x="135" y="123" text-anchor="middle" class="txt">baseSteps</text><text x="135" y="147" text-anchor="middle" class="small">软预算</text>
+  <rect class="box" x="300" y="92" width="170" height="78"/><text x="385" y="123" text-anchor="middle" class="txt">recordTurn</text><text x="385" y="147" text-anchor="middle" class="small">记录本轮动作</text>
+  <rect class="box good" x="550" y="56" width="170" height="78"/><text x="635" y="88" text-anchor="middle" class="txt">有进展</text><text x="635" y="112" text-anchor="middle" class="small">写入/新信息</text>
+  <rect class="box bad" x="550" y="158" width="170" height="78"/><text x="635" y="190" text-anchor="middle" class="txt">可纠偏异常</text><text x="635" y="214" text-anchor="middle" class="small">复读/停滞/连错</text>
+  <rect class="box hard" x="550" y="272" width="170" height="78"/><text x="635" y="304" text-anchor="middle" class="txt">预算耗尽</text><text x="635" y="328" text-anchor="middle" class="small">软顶/硬顶/二次熔断</text>
+  <rect class="box good" x="770" y="56" width="110" height="78"/><text x="825" y="101" text-anchor="middle" class="txt">续期</text>
+  <rect class="box soft" x="770" y="158" width="110" height="78"/><text x="825" y="190" text-anchor="middle" class="txt">注入</text><text x="825" y="214" text-anchor="middle" class="small">纠偏 prompt</text>
+  <rect class="box bad" x="770" y="272" width="110" height="78"/><text x="825" y="316" text-anchor="middle" class="txt">交还用户</text>
+  <path class="arrow" d="M220 131 H297"/><path class="arrow" d="M470 131 C510 131 510 95 547 95"/><path class="arrow" d="M470 131 C510 131 510 197 547 197"/><path class="arrow" d="M470 131 C510 131 510 311 547 311"/>
+  <path class="arrow" d="M720 95 H767"/><path class="arrow" d="M720 197 H767"/><path class="arrow" d="M720 311 H767"/>
+  <path class="blue" d="M825 236 C825 400 385 400 385 172"/>
+  <text x="120" y="392" class="small" fill="#2563eb">纠偏只给一次，回循环但不重置预算；勤奋的继续跑，失控的停下来</text>
+</svg>

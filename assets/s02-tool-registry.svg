@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="430" viewBox="0 0 920 430" role="img" aria-labelledby="title desc">
+  <title id="title">s02 tool registry</title>
+  <desc id="desc">A registry keeps model-facing schema and machine-facing handler together, then generates both tools and dispatch behavior.</desc>
+  <style>
+    .bg{fill:#f8fafc}.box{fill:#fff;stroke:#334155;stroke-width:2;rx:12}.reg{fill:#ede9fe}.api{fill:#dbeafe}.run{fill:#dcfce7}.warn{fill:#fef3c7}.label{font:700 22px Arial,"Microsoft YaHei",sans-serif;fill:#0f172a}.txt{font:16px Arial,"Microsoft YaHei",sans-serif;fill:#334155}.small{font:14px Arial,"Microsoft YaHei",sans-serif;fill:#475569}.arrow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+  </style>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker></defs>
+  <rect class="bg" width="920" height="430"/>
+  <text x="40" y="48" class="label">从 if-else 到工具注册表</text>
+  <rect class="box warn" x="45" y="92" width="250" height="104"/>
+  <text x="170" y="126" text-anchor="middle" class="txt">s01 的问题</text>
+  <text x="170" y="151" text-anchor="middle" class="small">加工具要改两处</text>
+  <text x="170" y="174" text-anchor="middle" class="small">TOOLS 声明 + 执行分支</text>
+  <rect class="box reg" x="360" y="72" width="210" height="260"/>
+  <text x="465" y="106" text-anchor="middle" class="txt">REGISTRY</text>
+  <rect class="box" x="385" y="130" width="160" height="52"/><text x="465" y="162" text-anchor="middle" class="small">description</text>
+  <rect class="box" x="385" y="194" width="160" height="52"/><text x="465" y="226" text-anchor="middle" class="small">parameters</text>
+  <rect class="box" x="385" y="258" width="160" height="52"/><text x="465" y="290" text-anchor="middle" class="small">handler</text>
+  <rect class="box api" x="640" y="92" width="220" height="86"/>
+  <text x="750" y="127" text-anchor="middle" class="txt">生成 TOOLS</text>
+  <text x="750" y="153" text-anchor="middle" class="small">给模型看的说明书</text>
+  <rect class="box run" x="640" y="246" width="220" height="86"/>
+  <text x="750" y="281" text-anchor="middle" class="txt">dispatch(call)</text>
+  <text x="750" y="307" text-anchor="middle" class="small">查表执行 handler</text>
+  <path class="arrow" d="M295 144 H357"/><path class="arrow" d="M570 145 H637"/><path class="arrow" d="M570 288 H637"/>
+  <text x="465" y="374" text-anchor="middle" class="txt">单一事实来源：声明和实现放一起，循环以后不再改</text>
+</svg>

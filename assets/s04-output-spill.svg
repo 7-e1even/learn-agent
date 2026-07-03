@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="430" viewBox="0 0 920 430" role="img" aria-labelledby="title desc">
+  <title id="title">s04 output spill</title>
+  <desc id="desc">Output spill keeps a preview in context and saves the complete output to disk with a read pointer.</desc>
+  <style>
+    .bg{fill:#f8fafc}.box{fill:#fff;stroke:#334155;stroke-width:2;rx:12}.bad{fill:#fee2e2}.good{fill:#dcfce7}.disk{fill:#ede9fe}.ctx{fill:#dbeafe}.label{font:700 22px Arial,"Microsoft YaHei",sans-serif;fill:#0f172a}.txt{font:16px Arial,"Microsoft YaHei",sans-serif;fill:#334155}.small{font:14px Arial,"Microsoft YaHei",sans-serif;fill:#475569}.arrow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+  </style>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker></defs>
+  <rect class="bg" width="920" height="430"/>
+  <text x="40" y="48" class="label">工具输出预算：截断丢信息，溢出不丢</text>
+  <rect class="box bad" x="50" y="92" width="220" height="112"/>
+  <text x="160" y="124" text-anchor="middle" class="txt">粗暴截断</text>
+  <text x="160" y="150" text-anchor="middle" class="small">只留下前 50KB</text>
+  <text x="160" y="174" text-anchor="middle" class="small">后半段永久消失</text>
+  <rect class="box" x="350" y="92" width="220" height="112"/>
+  <text x="460" y="124" text-anchor="middle" class="txt">大输出</text>
+  <text x="460" y="150" text-anchor="middle" class="small">cat / build log / MCP</text>
+  <text x="460" y="174" text-anchor="middle" class="small">先压日志，再算预算</text>
+  <rect class="box good" x="650" y="70" width="220" height="86"/>
+  <text x="760" y="104" text-anchor="middle" class="txt">上下文里</text>
+  <text x="760" y="130" text-anchor="middle" class="small">头尾预览 + 指针</text>
+  <rect class="box disk" x="650" y="214" width="220" height="86"/>
+  <text x="760" y="248" text-anchor="middle" class="txt">磁盘里</text>
+  <text x="760" y="274" text-anchor="middle" class="small">完整输出，一字不丢</text>
+  <rect class="box ctx" x="350" y="278" width="220" height="86"/>
+  <text x="460" y="312" text-anchor="middle" class="txt">需要细节时</text>
+  <text x="460" y="338" text-anchor="middle" class="small">read_file(offset, limit)</text>
+  <path class="arrow" d="M350 148 H273"/><path class="arrow" d="M570 135 C605 135 610 113 647 113"/><path class="arrow" d="M570 160 C610 180 610 257 647 257"/><path class="arrow" d="M650 287 C610 314 610 321 573 321"/>
+  <text x="460" y="400" text-anchor="middle" class="small">模型知道：全文在哪、多大、怎么取；不用重跑昂贵命令</text>
+</svg>

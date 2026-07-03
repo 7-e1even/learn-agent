@@ -1,0 +1,7 @@
+node_modules/
+my-agent/
+.env
+*.log
+.agent-spill/
+.sessions/
+

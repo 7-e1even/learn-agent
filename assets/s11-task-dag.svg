@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="430" viewBox="0 0 920 430" role="img" aria-labelledby="title desc">
+  <title id="title">s11 task dag</title>
+  <desc id="desc">A task DAG controls ready tasks, dispatch binding, settlement, and completion gates for multiple agents.</desc>
+  <style>
+    .bg{fill:#f8fafc}.node{fill:#fff;stroke:#334155;stroke-width:2;rx:12}.ready{fill:#dcfce7}.run{fill:#dbeafe}.block{fill:#fef3c7}.gate{fill:#fee2e2}.label{font:700 22px Arial,"Microsoft YaHei",sans-serif;fill:#0f172a}.txt{font:16px Arial,"Microsoft YaHei",sans-serif;fill:#334155}.small{font:14px Arial,"Microsoft YaHei",sans-serif;fill:#475569}.arrow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+  </style>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker></defs>
+  <rect class="bg" width="920" height="430"/>
+  <text x="40" y="48" class="label">多 agent 协作：ready 集合和闸门替模型记状态</text>
+  <rect class="node ready" x="80" y="110" width="150" height="66"/><text x="155" y="150" text-anchor="middle" class="small">分析现状</text>
+  <rect class="node block" x="320" y="80" width="150" height="66"/><text x="395" y="120" text-anchor="middle" class="small">重构核心</text>
+  <rect class="node block" x="320" y="180" width="150" height="66"/><text x="395" y="220" text-anchor="middle" class="small">更新文档</text>
+  <rect class="node block" x="560" y="130" width="150" height="66"/><text x="635" y="170" text-anchor="middle" class="small">补测试</text>
+  <rect class="node gate" x="760" y="130" width="120" height="66"/><text x="820" y="170" text-anchor="middle" class="small">整体验收</text>
+  <path class="arrow" d="M230 143 C270 143 275 113 317 113"/><path class="arrow" d="M230 143 C270 143 275 213 317 213"/><path class="arrow" d="M470 113 C520 113 515 163 557 163"/><path class="arrow" d="M470 213 C580 250 700 250 808 198"/><path class="arrow" d="M710 163 H757"/>
+  <rect class="node run" x="95" y="290" width="190" height="72"/><text x="190" y="320" text-anchor="middle" class="txt">bindDispatch</text><text x="190" y="344" text-anchor="middle" class="small">派活即 in_progress</text>
+  <rect class="node ready" x="365" y="290" width="190" height="72"/><text x="460" y="320" text-anchor="middle" class="txt">settle</text><text x="460" y="344" text-anchor="middle" class="small">收口即回写 DAG</text>
+  <rect class="node gate" x="635" y="290" width="190" height="72"/><text x="730" y="320" text-anchor="middle" class="txt">complete gate</text><text x="730" y="344" text-anchor="middle" class="small">未收口则拒绝完成</text>
+  <path class="arrow" d="M285 326 H362"/><path class="arrow" d="M555 326 H632"/>
+</svg>

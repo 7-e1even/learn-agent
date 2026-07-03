@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="430" viewBox="0 0 920 430" role="img" aria-labelledby="title desc">
+  <title id="title">s01 agent loop</title>
+  <desc id="desc">Chatbot stops after one model answer; an agent keeps looping through model decisions, tool execution, and observations.</desc>
+  <style>
+    .bg{fill:#f8fafc}.box{fill:#fff;stroke:#334155;stroke-width:2;rx:12}.model{fill:#dbeafe}.tool{fill:#dcfce7}.stop{fill:#fee2e2}.label{font:700 21px Arial,"Microsoft YaHei",sans-serif;fill:#0f172a}.txt{font:16px Arial,"Microsoft YaHei",sans-serif;fill:#334155}.arrow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}.loop{stroke:#2563eb;stroke-width:3;fill:none;marker-end:url(#blueArrow)}
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker>
+    <marker id="blueArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/></marker>
+  </defs>
+  <rect class="bg" width="920" height="430"/>
+  <text x="40" y="48" class="label">Chatbot：一问一答</text>
+  <rect class="box" x="48" y="86" width="150" height="72"/><text x="123" y="116" text-anchor="middle" class="txt">用户</text><text x="123" y="139" text-anchor="middle" class="txt">发消息</text>
+  <rect class="box model" x="288" y="86" width="150" height="72"/><text x="363" y="116" text-anchor="middle" class="txt">模型</text><text x="363" y="139" text-anchor="middle" class="txt">回答</text>
+  <rect class="box stop" x="528" y="86" width="150" height="72"/><text x="603" y="116" text-anchor="middle" class="txt">结束</text><text x="603" y="139" text-anchor="middle" class="txt">等下一问</text>
+  <path class="arrow" d="M198 122 H285"/><path class="arrow" d="M438 122 H525"/>
+
+  <text x="40" y="230" class="label">Agent：模型决定是否继续，代码只负责执行工具并喂回结果</text>
+  <rect class="box" x="48" y="272" width="130" height="68"/><text x="113" y="301" text-anchor="middle" class="txt">用户任务</text><text x="113" y="324" text-anchor="middle" class="txt">messages+</text>
+  <rect class="box model" x="248" y="272" width="150" height="68"/><text x="323" y="301" text-anchor="middle" class="txt">chat()</text><text x="323" y="324" text-anchor="middle" class="txt">模型决定</text>
+  <rect class="box tool" x="468" y="272" width="150" height="68"/><text x="543" y="301" text-anchor="middle" class="txt">执行工具</text><text x="543" y="324" text-anchor="middle" class="txt">run_shell</text>
+  <rect class="box" x="688" y="272" width="150" height="68"/><text x="763" y="301" text-anchor="middle" class="txt">tool 结果</text><text x="763" y="324" text-anchor="middle" class="txt">写回历史</text>
+  <path class="arrow" d="M178 306 H245"/><path class="arrow" d="M398 306 H465"/><path class="arrow" d="M618 306 H685"/>
+  <path class="loop" d="M763 340 C763 393 323 393 323 343"/>
+  <text x="623" y="392" class="txt" fill="#2563eb">有 tool_calls：回到模型继续</text>
+  <rect class="box stop" x="248" y="174" width="150" height="54"/><text x="323" y="207" text-anchor="middle" class="txt">无工具调用：收口</text>
+  <path class="arrow" d="M323 272 V231"/>
+</svg>

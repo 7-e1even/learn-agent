@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="430" viewBox="0 0 920 430" role="img" aria-labelledby="title desc">
+  <title id="title">s05 tool call repair</title>
+  <desc id="desc">Interrupted tool calls must be repaired by adding synthetic tool results for every dangling tool_call_id.</desc>
+  <style>
+    .bg{fill:#f8fafc}.box{fill:#fff;stroke:#334155;stroke-width:2;rx:12}.bad{fill:#fee2e2}.good{fill:#dcfce7}.mid{fill:#dbeafe}.label{font:700 22px Arial,"Microsoft YaHei",sans-serif;fill:#0f172a}.txt{font:16px Arial,"Microsoft YaHei",sans-serif;fill:#334155}.small{font:14px Arial,"Microsoft YaHei",sans-serif;fill:#475569}.arrow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+  </style>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker></defs>
+  <rect class="bg" width="920" height="430"/>
+  <text x="40" y="48" class="label">Ctrl+C 之后：修复悬空 tool_call，而不是丢历史</text>
+  <rect class="box mid" x="45" y="92" width="150" height="70"/><text x="120" y="122" text-anchor="middle" class="txt">user</text><text x="120" y="145" text-anchor="middle" class="small">跑测试并读文件</text>
+  <rect class="box mid" x="245" y="92" width="190" height="70"/><text x="340" y="122" text-anchor="middle" class="txt">assistant</text><text x="340" y="145" text-anchor="middle" class="small">call_test + call_read</text>
+  <rect class="box good" x="485" y="92" width="150" height="70"/><text x="560" y="122" text-anchor="middle" class="txt">tool</text><text x="560" y="145" text-anchor="middle" class="small">call_test 结果</text>
+  <rect class="box bad" x="685" y="92" width="170" height="70"/><text x="770" y="122" text-anchor="middle" class="txt">Ctrl+C</text><text x="770" y="145" text-anchor="middle" class="small">call_read 悬空</text>
+  <path class="arrow" d="M195 127 H242"/><path class="arrow" d="M435 127 H482"/><path class="arrow" d="M635 127 H682"/>
+  <text x="460" y="210" text-anchor="middle" class="txt">原样发送会 400：每个 tool_call 都必须有对应 tool 消息</text>
+  <rect class="box bad" x="70" y="262" width="230" height="88"/><text x="185" y="296" text-anchor="middle" class="txt">错误做法</text><text x="185" y="322" text-anchor="middle" class="small">丢掉半截 assistant</text><text x="185" y="344" text-anchor="middle" class="small">模型失忆</text>
+  <rect class="box good" x="370" y="262" width="230" height="88"/><text x="485" y="296" text-anchor="middle" class="txt">正确做法</text><text x="485" y="322" text-anchor="middle" class="small">补合成 tool 结果</text><text x="485" y="344" text-anchor="middle" class="small">“用户中断，未运行”</text>
+  <rect class="box mid" x="670" y="262" width="190" height="88"/><text x="765" y="296" text-anchor="middle" class="txt">下一轮</text><text x="765" y="322" text-anchor="middle" class="small">历史配平</text><text x="765" y="344" text-anchor="middle" class="small">可以继续对话</text>
+  <path class="arrow" d="M600 306 H667"/>
+</svg>
