@@ -2,24 +2,24 @@
 
 [简体中文](./README.md) · **English**
 
-![lessons](https://img.shields.io/badge/lessons-ongoing-blue)
+![notes](https://img.shields.io/badge/notes-ongoing-blue)
 ![zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![Node ≥ 18](https://img.shields.io/badge/node-%E2%89%A5%2018-339933?logo=node.js&logoColor=white)
 ![MIT](https://img.shields.io/badge/license-MIT-lightgrey)
 [![Full implementation · Reina](https://img.shields.io/badge/full_implementation-Reina-8A2BE2?logo=github)](https://github.com/Reina-Agent/Reina)
 
-**Jump to**　·　[Who it's for](#who)　·　[Run in 30s](#start)　·　[All lessons](#toc)　·　[Full impl · Reina](#reina)　·　[Star it](#star)
+**Jump to**　·　[Who it's for](#who)　·　[Run in 30s](#start)　·　[All notes](#toc)　·　[Full impl · Reina](#reina)　·　[Star it](#star)
 
 > A single `while` loop is the whole secret of an agent — **but it only keeps it alive for 5 minutes**.
-> Everything else — what makes it survive 5 *hours* of real work — is what these lessons are about.
+> Everything else — what makes it survive 5 *hours* of real work — is what these notes are about.
 
-Want to understand how coding agents like **Claude Code, Codex, opencode** actually work under the hood? This repo is my field notes from the potholes I hit building my own agent from scratch: **a growing series of progressive lessons, each with a zero-dependency, single-file, runnable program**, each one fixing a real failure.
+Want to understand how coding agents like **Claude Code, Codex, opencode** actually work under the hood? This repo is my field notes from the potholes I hit building my own agent from scratch: **a growing series of progressive notes, each with a zero-dependency, single-file, runnable program**, each one fixing a real failure.
 
 ![every mechanism grows back onto the same loop](./assets/s12-mechanism-map.svg)
 
 > [!IMPORTANT]
 > **What makes this different from other "build your own agent" tutorials**: the mechanisms here aren't imagined from API docs. They're ported (and simplified) from a **real, shipping, fully open-source desktop coding agent** — **[Reina](https://github.com/Reina-Agent/Reina)** — and **every error handler, every optimization, is a bug that was actually hit in production**.
-> Done with the lessons and want the production-grade source? Go straight to 👉 **[Reina-Agent/Reina](https://github.com/Reina-Agent/Reina)**
+> Done with the notes and want the production-grade source? Go straight to 👉 **[Reina-Agent/Reina](https://github.com/Reina-Agent/Reina)**
 
 <a id="who"></a>
 
@@ -31,7 +31,7 @@ Three quick checks — if any one hits, it's worth your time:
 - You use Claude Code every day and want to know how the "magic" — compaction, caching, subagents, permission gates — **actually works inside**;
 - You need to ship an agent at work and want a **production-tested checklist of mechanisms**, not another hello world.
 
-Agents look simple. Try to actually implement one and you'll find there's a lot to learn. **The gap between "it runs" and "it's usable" is an entire layer of engineering nobody explains systematically** — each lesson solves one of these real problems.
+Agents look simple. Try to actually implement one and you'll find there's a lot to learn. **The gap between "it runs" and "it's usable" is an entire layer of engineering nobody explains systematically** — each note solves one of these real problems.
 
 <a id="start"></a>
 
@@ -44,7 +44,7 @@ git clone https://github.com/7-e1even/learn-agent && cd learn-agent
 AGENT_API_KEY=sk-xxx node s01_agent_loop/agent.mjs
 ```
 
-No key handy? The self-test mode in [s12](./s12_full_agent/) runs the whole thing end-to-end **without any key**.
+No key handy? The self-test mode in [s12](./s12_full_agent/) runs the core loop end-to-end **without any key**.
 
 Once it's running, read from s01 onward in order — read each README while running its code.
 
@@ -52,7 +52,7 @@ Once it's running, read from s01 onward in order — read each README while runn
 
 ## Contents
 
-The loop is written in lesson 1 and **barely changes after that** — every mechanism grows around it. Each lesson has the same shape: **the bug that bit us → the design decision → a walk through runnable code → how the real product does it → hands-on challenge**.
+The loop is written in note 1 and **barely changes after that** — every mechanism grows around it. s01-s12 build and assemble the core loop; s13-s15 add the production hardening layers a real coding agent needs at the boundary. Each note has the same shape: **the bug that bit us → the design decision → a walk through runnable code → how the real product does it → hands-on challenge**.
 
 | # | Topic | The failure it fixes |
 |---|---|---|
@@ -67,7 +67,7 @@ The loop is written in lesson 1 and **barely changes after that** — every mech
 | [s09](./s09_subagent_watchdog/) | Subagents & heartbeat watchdog | Stall detection (idle vs. stuck in a tool), salvage last words before the kill |
 | [s10](./s10_prompt_assembly/) | System-prompt assembly | The prompt is assembled every turn, not hardcoded; skills load on demand |
 | [s11](./s11_agent_team/) | Multi-agent coordination | DAG task graph, same-brief dedup, concurrency cap |
-| [s12](./s12_full_agent/) | Assembly | Every mechanism returns to the same loop; key-free end-to-end self-test |
+| [s12](./s12_full_agent/) | Core assembly | Core mechanisms return to the same loop; key-free end-to-end self-test |
 | [s13](./s13_permissions/) | Permissions & approval | Adjudicate dangerous ops before the side effect; allow/deny/ask, first match wins |
 | [s14](./s14_provider_compat/) | Provider compatibility layer | Models spew malformed tool calls (name/args/truncation/prose) — flatten it at the boundary |
 | [s15](./s15_tool_disclosure/) | Progressive tool disclosure | Too many tools blow up context; unshielding shouldn't re-inject the array or bust the cache |

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="430" viewBox="0 0 920 430" role="img" aria-labelledby="title desc">
+  <title id="title">s14 provider normalize</title>
+  <desc id="desc">A provider compatibility layer normalizes malformed tool calls before the agent loop sees them.</desc>
+  <style>
+    .bg{fill:#f8fafc}.box{fill:#fff;stroke:#334155;stroke-width:2;rx:12}.raw{fill:#fee2e2}.layer{fill:#dbeafe}.clean{fill:#dcfce7}.warn{fill:#fef3c7}.label{font:700 22px Arial,"Microsoft YaHei",sans-serif;fill:#0f172a}.txt{font:16px Arial,"Microsoft YaHei",sans-serif;fill:#334155}.small{font:14px Arial,"Microsoft YaHei",sans-serif;fill:#475569}.arrow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+  </style>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker></defs>
+  <rect class="bg" width="920" height="430"/>
+  <text x="40" y="48" class="label">Provider 兼容层：循环只接收干净 tool call</text>
+
+  <rect class="raw" x="50" y="90" width="170" height="56"/><text x="135" y="123" text-anchor="middle" class="small">bash / terminal</text>
+  <rect class="raw" x="50" y="160" width="170" height="56"/><text x="135" y="193" text-anchor="middle" class="small">cmd / shellCommand</text>
+  <rect class="raw" x="50" y="230" width="170" height="56"/><text x="135" y="263" text-anchor="middle" class="small">truncated JSON</text>
+  <rect class="raw" x="50" y="300" width="170" height="56"/><text x="135" y="333" text-anchor="middle" class="small">prose with JSON</text>
+
+  <rect class="layer" x="310" y="86" width="260" height="274"/>
+  <text x="440" y="122" text-anchor="middle" class="txt">compat boundary</text>
+  <text x="440" y="158" text-anchor="middle" class="small">1. normalize tool name</text>
+  <text x="440" y="192" text-anchor="middle" class="small">2. normalize input keys</text>
+  <text x="440" y="226" text-anchor="middle" class="small">3. repair truncated JSON</text>
+  <text x="440" y="260" text-anchor="middle" class="small">4. extract embedded object</text>
+  <text x="440" y="306" text-anchor="middle" class="small">mark fallback if guessed</text>
+
+  <rect class="clean" x="680" y="112" width="180" height="76"/>
+  <text x="770" y="143" text-anchor="middle" class="txt">{ name, input }</text>
+  <text x="770" y="168" text-anchor="middle" class="small">dispatch normally</text>
+  <rect class="warn" x="680" y="242" width="180" height="76"/>
+  <text x="770" y="273" text-anchor="middle" class="txt">null or fallback</text>
+  <text x="770" y="298" text-anchor="middle" class="small">tell model to retry</text>
+
+  <path class="arrow" d="M220 118 C260 118 265 135 307 135"/>
+  <path class="arrow" d="M220 188 C260 188 265 188 307 188"/>
+  <path class="arrow" d="M220 258 C260 258 265 248 307 248"/>
+  <path class="arrow" d="M220 328 C260 328 265 306 307 306"/>
+  <path class="arrow" d="M570 170 C610 170 630 150 677 150"/>
+  <path class="arrow" d="M570 280 C610 280 630 280 677 280"/>
+</svg>

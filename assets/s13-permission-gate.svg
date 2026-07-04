@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="430" viewBox="0 0 920 430" role="img" aria-labelledby="title desc">
+  <title id="title">s13 permission gate</title>
+  <desc id="desc">Permission rules decide allow, deny, or ask before a tool side effect is executed.</desc>
+  <style>
+    .bg{fill:#f8fafc}.box{fill:#fff;stroke:#334155;stroke-width:2;rx:12}.deny{fill:#fee2e2}.allow{fill:#dcfce7}.ask{fill:#fef3c7}.rule{fill:#e0f2fe}.label{font:700 22px Arial,"Microsoft YaHei",sans-serif;fill:#0f172a}.txt{font:16px Arial,"Microsoft YaHei",sans-serif;fill:#334155}.small{font:14px Arial,"Microsoft YaHei",sans-serif;fill:#475569}.arrow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}.dash{stroke:#94a3b8;stroke-width:2;fill:none;stroke-dasharray:6 6;marker-end:url(#arrow)}
+  </style>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker></defs>
+  <rect class="bg" width="920" height="430"/>
+  <text x="40" y="48" class="label">权限闸：副作用发生前，先走确定性规则链</text>
+
+  <rect class="box" x="50" y="126" width="150" height="78"/>
+  <text x="125" y="156" text-anchor="middle" class="txt">tool request</text>
+  <text x="125" y="181" text-anchor="middle" class="small">run_shell / write_file</text>
+
+  <rect class="rule" x="260" y="82" width="180" height="64"/>
+  <text x="350" y="110" text-anchor="middle" class="txt">global rules</text>
+  <text x="350" y="132" text-anchor="middle" class="small">deny git push, .env</text>
+  <rect class="rule" x="260" y="184" width="180" height="64"/>
+  <text x="350" y="212" text-anchor="middle" class="txt">workspace rules</text>
+  <text x="350" y="234" text-anchor="middle" class="small">allow npm test, src/**</text>
+
+  <rect class="box" x="510" y="126" width="172" height="78"/>
+  <text x="596" y="155" text-anchor="middle" class="txt">merged chain</text>
+  <text x="596" y="180" text-anchor="middle" class="small">all deny first</text>
+
+  <rect class="box" x="742" y="126" width="128" height="78"/>
+  <text x="806" y="155" text-anchor="middle" class="txt">first match</text>
+  <text x="806" y="180" text-anchor="middle" class="small">else default ask</text>
+
+  <path class="arrow" d="M200 165 H257"/>
+  <path class="arrow" d="M440 114 C474 114 475 146 507 146"/>
+  <path class="arrow" d="M440 216 C474 216 475 184 507 184"/>
+  <path class="arrow" d="M682 165 H739"/>
+
+  <rect class="allow" x="110" y="306" width="180" height="70"/>
+  <text x="200" y="334" text-anchor="middle" class="txt">allow</text>
+  <text x="200" y="358" text-anchor="middle" class="small">execute tool</text>
+  <rect class="deny" x="370" y="306" width="180" height="70"/>
+  <text x="460" y="334" text-anchor="middle" class="txt">deny</text>
+  <text x="460" y="358" text-anchor="middle" class="small">return observation</text>
+  <rect class="ask" x="630" y="306" width="180" height="70"/>
+  <text x="720" y="334" text-anchor="middle" class="txt">ask</text>
+  <text x="720" y="358" text-anchor="middle" class="small">pause for approval</text>
+
+  <path class="dash" d="M806 204 C730 270 336 270 216 304"/>
+  <path class="dash" d="M806 204 C720 258 542 262 472 303"/>
+  <path class="dash" d="M806 204 C790 254 742 270 724 303"/>
+</svg>

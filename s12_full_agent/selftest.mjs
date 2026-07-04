@@ -151,4 +151,4 @@ if (failed > 0) {
   console.log(`\n\x1b[31m${failed} 项未通过。完整输出：\x1b[0m\n${a.out}\n${b.out}`);
   process.exit(1);
 }
-console.log(`\n\x1b[32m全部 ${checks.length} 项通过 —— 主线各章的机制在同一个循环里各就各位。\x1b[0m`);
+console.log(`\n\x1b[32m全部 ${checks.length} 项通过 —— 前十一章核心机制在同一个循环里各就各位。\x1b[0m`);

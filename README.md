@@ -44,7 +44,7 @@ git clone https://github.com/7-e1even/learn-agent && cd learn-agent
 AGENT_API_KEY=sk-xxx node s01_agent_loop/agent.mjs
 ```
 
-手上一时没有 key？[s12](./s12_full_agent/) 的自测模式**不需要任何 key** 也能端到端跑通全部机制。
+手上一时没有 key？[s12](./s12_full_agent/) 的自测模式**不需要任何 key** 也能端到端跑通核心机制。
 
 跑起来后，从 s01 顺着往后读，每篇边读 README 边跑代码即可。
 
@@ -52,7 +52,7 @@ AGENT_API_KEY=sk-xxx node s01_agent_loop/agent.mjs
 
 ## 目录
 
-循环在第 1 篇写完，**之后尽量不改**——所有机制都围着它长。每篇的结构一致：**踩过的坑 → 设计决定 → 可跑代码走读 → 真实产品对照 → 动手挑战**。
+循环在第 1 篇写完，**之后尽量不改**——所有机制都围着它长。s01-s12 先把核心循环拼成一个可验收的 agent，s13-s15 再补真实 coding agent 必须面对的边界层：权限、Provider 兼容、工具披露。每篇的结构一致：**踩过的坑 → 设计决定 → 可跑代码走读 → 真实产品对照 → 动手挑战**。
 
 | # | 主题 | 解决翻车点 |
 |---|---|---|
@@ -67,7 +67,7 @@ AGENT_API_KEY=sk-xxx node s01_agent_loop/agent.mjs
 | [s09](./s09_subagent_watchdog/) | 子代理与心跳看门狗 | 卡死检测（闲置 vs 在工具里）、击杀前抢救遗言 |
 | [s10](./s10_prompt_assembly/) | System prompt 组装 | prompt 是每轮拼出来的，不是写死的；skills 按需加载 |
 | [s11](./s11_agent_team/) | 多 agent 协作 | DAG 任务图、同 brief 去重、并发上限 |
-| [s12](./s12_full_agent/) | 合体 | 全部机制回到同一个循环；免 key 端到端自测 |
+| [s12](./s12_full_agent/) | 核心合体 | 核心机制回到同一个循环；免 key 端到端自测 |
 | [s13](./s13_permissions/) | 权限与审批 | 危险操作在副作用前裁决；allow/deny/ask 三态首匹配 |
 | [s14](./s14_provider_compat/) | Provider 兼容层 | 模型乱吐 tool call（名字/参数/截断/散文）在边界掰平 |
 | [s15](./s15_tool_disclosure/) | 渐进式工具披露 | 工具多了不撑爆上下文；解蔽别回灌数组、撞缓存 |

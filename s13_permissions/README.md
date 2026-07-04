@@ -7,6 +7,8 @@
 会往生产分支乱推的东西。本章给这双手装一层闸——但不是靠"求模型别乱来"，而是靠一条
 **声明式、有序**的规则链。
 
+![权限规则链在工具副作用前裁决 allow / deny / ask](../assets/s13-permission-gate.svg)
+
 ## 每次都弹窗问，和什么都不问，都是错的
 
 给危险操作装闸，最容易掉进的两个极端：
@@ -112,7 +114,7 @@ export function mergeRules(globalRules, workspaceRules) {
 
 本章对应 Reina 的 `packages/core/src/permissions.ts`：`PermissionRule` 的形状、`evaluatePermission`
 的首匹配、`ruleMatches` 里的 `commandPrefix` / `pathGlob` 选择器、一个自己写的 `globMatches`
-小匹配器，以及"workspace 规则合并时排在 global 之前"的覆盖语义——和本章一致。生产版还多两件
+小匹配器，以及"deny 先合并到链首，allow/ask 再由 workspace 覆盖 global"的覆盖语义——和本章一致。生产版还多两件
 本章略过的事：规则文件按 mtime 缓存（避免每次求值都读盘），以及 shell 命令的审批走
 `shell-approval.ts` 做更细的命令解析（把一行 `a && b` 拆成多条分别裁决，别让危险命令躲在
 `&&` 后面）。三态里的 `ask` 对应桌面端弹出的审批卡片，用户点"总是允许"就把这条固化进

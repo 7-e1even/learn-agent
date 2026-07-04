@@ -22,6 +22,8 @@
 **这不该是循环的负担，该在 provider 边界做一层归一化**，循环里永远只见干净的 `{ name, input }`。
 四手全是死规则、零模型参与。
 
+![Provider 兼容层把脏 tool call 归一化后再交给循环](../assets/s14-provider-normalize.svg)
+
 ## 先跑演示（不需要 API key）
 
 ```sh
