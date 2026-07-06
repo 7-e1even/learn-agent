@@ -1,18 +1,12 @@
 # s08 · 会话持久化与恢复
 
-前几章的 agent 把 `messages` 放在内存里，进程一退全部丢失。本章实现会话落盘与恢复：追加式事件日志 + 重放。
+agent 干了半小时的活：几十轮对话、二十次工具调用。你按错了 Ctrl+C，或终端误关、笔记本没电——重新打开，它什么都不记得。前几章的 agent 都这样：`messages` 只存在内存里。本章把会话写到磁盘，崩溃后原样恢复，做法是**追加式事件日志 + 重放**。
 
-## 问题：内存中的会话无法恢复
-
-前几章的 agent 有一个共同点：`messages` 数组只存在于内存。进程一退——按错了 Ctrl+C、终端被误关、笔记本没电、Node 崩溃——半小时的对话、二十次工具调用、建立起来的全部上下文都会丢失，重开之后从零开始。
-
-对聊天演示这无所谓；对干活的 agent 是严重缺陷：真实任务动辄运行几十分钟，崩溃、断电、误关是常态而不是意外。
-
-常见的第一反应是"把 messages 存成 JSON 文件，每次变化就重写一遍"。这个方案有隐患。本章讲清楚为什么它不可靠，以及真实产品的做法：**追加式事件日志 + 重放恢复**。
+常见的第一反应是"存成 JSON 文件，每次变化整个重写"。这个方案有隐患，先讲清楚为什么。
 
 ![追加式 JSONL 事件日志通过重放恢复状态，坏掉的末尾半行可以跳过](../assets/s08-event-log-replay.svg)
 
-本章代码 = s03 基底 + `store.mjs`（事件日志与重放）。
+本章代码 = s03 的最小 agent 循环 + [store.mjs](./store.mjs)（事件日志与重放）。
 
 ## 运行演示（不需要 API key）
 
@@ -38,9 +32,9 @@ node s08_persistence/demo.mjs
 
 ### ① 为什么"每次全量重写 JSON"不可靠
 
-写文件不是原子操作。`writeFileSync(f, bigJson)` 在操作系统层面是"打开（清空旧内容）→ 分块写入字节"。崩溃如果落在中间，磁盘上就是半个 JSON：旧版本已被清空，新版本没写完——`JSON.parse` 失败，整个会话（包括崩溃前完好的部分）一起丢失。演示场景一就是这个现场。
+写文件不是原子操作。`writeFileSync(f, bigJson)` 在操作系统层面是"打开（清空旧内容）→ 分块写入字节"。崩溃落在中间，磁盘上就是半个 JSON：旧版本已清空，新版本没写完——`JSON.parse` 失败，整个会话（包括崩溃前完好的部分）一起丢失。演示场景一就是这个现场。
 
-而且这个方案越用越危险：会话越长，重写一次的时间窗口越大，中招概率越高——最有价值的长会话恰恰是最容易被写坏的会话。
+而且越用越危险：会话越长，重写窗口越大，中招概率越高——最有价值的长会话恰恰最容易被写坏。
 
 追加式日志（JSONL：一行一个 JSON）从结构上消除了这个问题：
 
@@ -50,7 +44,7 @@ node s08_persistence/demo.mjs
 {"ts":"…","type":"tool_call","record":{"id":"call_1","name":"read_file","status":"completed",…}}
 ```
 
-每发生一件事（用户消息/助手消息/工具结果/压缩边界）就 append 一行，**已写下的字节永远不被触碰**。崩溃的影响范围被限制在"最后一行可能写了一半"——重放时跳过那行坏数据即可，丢一条消息，不丢整个会话。这不是额外的容错设计，是 append-only 这个结构自带的性质。
+每发生一件事（用户消息/助手消息/工具结果/压缩边界）就在末尾追加一行，**已写下的字节永远不被触碰**。崩溃的影响被限制在"最后一行可能写了一半"——恢复时跳过那行即可：丢一条消息，不丢整个会话。这不是额外的容错，是"只追加"结构自带的性质。
 
 ### ② 恢复 = 重放：状态是事件流的推导结果
 
@@ -70,11 +64,11 @@ for (const line of text.split("\n")) {
 }
 ```
 
-这个 reducer 结构（事件流 → fold → 状态）带来两个不显眼但重要的自由度：坏行可以跳过（容错），未知事件类型可以忽略（**向前兼容**——升级后的程序写了新事件，旧程序照样能加载它认识的部分）。
+这个结构带来两个不显眼但重要的自由度：坏行可以跳过（容错）；未知事件类型可以忽略（**向前兼容**——新版本程序写的日志，旧程序照样能加载它认识的部分）。
 
 ### ③ 会话粒度的配置也在流里
 
-一个容易忽略的细节：恢复会话时，模型配置从哪来？很多实现会顺手用当前的环境变量或全局默认。这是错的：**用什么模型是这个会话自己的属性**，创建时就该冻结进第一行 `session_meta`，恢复时以它为准：
+恢复会话时，模型配置从哪来？很多实现顺手用当前的环境变量或全局默认。这是错的：**用什么模型是这个会话自己的属性**，创建时就冻结进第一行 `session_meta`，恢复时以它为准：
 
 ```js
 meta = createSession(SESSIONS_DIR, { model: process.env.AGENT_MODEL ?? "deepseek-chat" });
@@ -82,13 +76,13 @@ meta = createSession(SESSIONS_DIR, { model: process.env.AGENT_MODEL ?? "deepseek
 const MODEL = restored.meta.model; // 来自会话记录，不是今天的默认值
 ```
 
-这是 Reina 遇到过的实际问题：加载旧会话时模型选择器显示的是新会话的默认值，而不是会话真正在用的（重放恢复出来的）模型——一个绑定了订阅的会话看起来像在用普通 API key，请求 401，用户以为是配置错误，排查了很久。配置跟着会话走，UI 和请求才不会不一致。
+配置跟着会话走，界面显示和实际请求才不会不一致（真实产品踩过事故，见文末）。
 
 ### ④ 工具调用带结构化 status 落盘
 
-s03 有一个当时就说明是临时方案的机制：靠报错文案前缀（`FAILURE_RE`）判断一次工具调用是否成功。文案是给模型看的界面，随时会改——拿它当机器判据，改一句文案就会悄悄破坏看门狗。本章移除这个脚手架：**成败在执行那一刻就确定，作为结构化字段落盘**。
+s03 有个临时方案：靠报错文案的开头文字（`FAILURE_RE`）判断工具调用是否成功。文案是写给模型看的，随时会改——拿它当机器判据太脆。本章移除这个脚手架：**成败在执行那一刻确定，作为结构化字段落盘**。
 
-约定很简单：handler `return` = completed，`throw` = failed；报错文案原样回给模型（错误即信息，一个字不少），但"失败了"这个事实走字段：
+约定很简单：handler `return` = completed，`throw` = failed；报错文案原样回给模型（错误即信息），但"失败了"这个事实走字段：
 
 ```js
 try {
@@ -98,11 +92,11 @@ try {
 }
 ```
 
-落盘的 `tool_call` 事件带着这个 status。从此审计、重放、看门狗都读字段，不再解析文案。
+落盘的 `tool_call` 事件带着这个 status。从此审计、重放、监督逻辑都读字段，不再解析文案。
 
 ## 接进你的 agent
 
-[agent.mjs](./agent.mjs) 是 s03 的 agent + 落盘。关键改动只有两处。第一，消息只从一个入口进数组——内存和磁盘一步完成，保持一致：
+[agent.mjs](./agent.mjs) 是 s03 的 agent + 落盘。关键改动两处。第一，消息只从一个入口进数组——内存和磁盘一步完成：
 
 ```js
 function pushMessage(message) {
@@ -122,16 +116,16 @@ AGENT_API_KEY=sk-xxx node agent.mjs --resume ses_mr47xdu8_sgf8
 # 已恢复会话 ses_mr47xdu8_sgf8：14 条消息，5 次工具调用
 ```
 
-验收方法：跟它聊两轮、让它读个文件，然后按 Ctrl+C 退出，再 `--resume` 回来问"我们刚才聊到哪了"——它应该答得上来。注意纠偏 prompt 也走 `pushMessage`：它是历史的一部分，恢复出来的会话必须和退出前一致，一条不多一条不少。
+验收：跟它聊两轮、让它读个文件，Ctrl+C 退出，再 `--resume` 回来问"刚才聊到哪了"——它应该答得上来。s03 看门狗注入的纠偏消息也走 `pushMessage`：恢复出的会话必须和退出前一致。
 
-## 真实产品对照
+## 真实产品对照（延伸阅读）
 
-本章机制对应 Reina 的 `packages/core/src/rollout.ts`（参照 openai/codex 的 rollout recorder 建模）：每个会话一个 `.reina/sessions/<id>.jsonl`，每次状态变化 append 一行 `{ ts, type, ... }`。示例版三种事件类型，生产版二十多种（`message` / `tool_call` / `tool_update` / `compacted` / `usage` / `todos`……）。几个值得参考的生产细节：
+本章机制对应 Reina（本系列对照的生产级 agent）的 `packages/core/src/rollout.ts`（参照 openai/codex 的 rollout recorder 建模）：每个会话一个 `.reina/sessions/<id>.jsonl`，每次状态变化 append 一行 `{ ts, type, ... }`。示例版三种事件类型，生产版二十多种（`message` / `tool_call` / `tool_update` / `compacted` / `usage` / `todos`……）。几个值得参考的生产细节：
 
 - **不变量写在注释里**："Writes are `O_APPEND` only. No code path ever rewrites an existing byte"——跨进程的并发写者也无法互相覆盖历史。进程内则常驻一个文件句柄、用 Promise 链串行化所有 append（示例版每次重开文件，崩溃安全性一样，性能差一些）。
 - **重放跳过坏行**：`loadRolloutAsSession` 对每行单独 `JSON.parse`，失败（"likely a torn final write from a crash"）就跳过并告警 `skipped N malformed line(s)`——和本章 demo 场景三相同。
 - **工具调用是结构化记录**：`packages/protocol/src/index.ts` 的 `ToolCallRecord` 带 `status: "pending_approval" | "running" | "completed" | "rejected" | "failed"`——比示例版的两态多出审批流和运行中；还有 `outputPath` 指向 `.reina/tool_outputs/` 下的完整输出存档。
-- **模型配置随会话重放**，且 `config` 事件对 model 是整体替换而非浅合并——浅合并会让上一个模型的 `baseUrl` 泄漏到切换后的模型上，Reina 注释里记着一次真实事故：kimi 切 codex 后残留的 baseUrl 把请求路由到了错误的主机。
+- **决定③的真实事故**：Reina 曾在加载旧会话时，模型选择器显示新会话的默认值，而不是会话真正在用的（重放恢复出来的）模型——一个绑定了订阅的会话看起来像在用普通 API key，请求 401，用户以为是配置错误，排查了很久。**模型配置随会话重放**之外，还有一个细节：`config` 事件对 model 是整体替换而非浅合并——浅合并会让上一个模型的 `baseUrl` 泄漏到切换后的模型上，Reina 注释里记着一次真实事故：kimi 切 codex 后残留的 baseUrl 把请求路由到了错误的主机。
 - 仅有的"全量重写"出现在迁移旧格式时（`migrateJsonSnapshotToJsonl`），而且写法是先写临时文件再 `rename` 进位——rename 在同一文件系统上是原子的，崩溃也不会留下半个 jsonl。
 
 另一个可观察的例子：Claude Code 的会话也是 JSONL（`~/.claude/projects/<项目>/**.jsonl`），`--resume` 的底层就是同一套重放事件流。

@@ -6,6 +6,22 @@ A series of advanced notes I compiled while developing [Reina](https://github.co
 
 The notes extract Reina's core mechanisms, simplify them into single-file programs, and organize them in progressive order. The mechanisms here are not guessed from API docs — they are approaches validated in a real product.
 
+At its core, an agent is one loop: the model asks for a tool, your code runs it and feeds the result back, until the model stops asking:
+
+```js
+while (true) {
+  const msg = await chat(messages);       // call the model once
+  messages.push(msg);
+  if (!msg.tool_calls?.length) break;     // no more tool requests — turn is over
+
+  for (const call of msg.tool_calls) {    // run each tool, feed the result back
+    messages.push({ role: "tool", tool_call_id: call.id, content: runTool(call) });
+  }
+}
+```
+
+These fifteen-odd lines are the entire core of s01 (the full runnable version is about 120 lines). The rest of the notes cover what goes wrong once this loop meets real tasks, and how to fix each problem.
+
 ![every mechanism builds on the same loop](./assets/s12-mechanism-map.svg)
 
 ## Who this is for
@@ -31,26 +47,27 @@ Read from s01 in order, running each note's code alongside its README.
 
 ## Contents
 
-The main loop is finished in the first note and barely changes afterwards; every mechanism extends around it. s01–s12 build up a complete, usable agent step by step; s13 onward covers boundary concerns a real coding agent has to handle: permissions, provider compatibility, tool disclosure, multi-model collaboration. Every note follows the same structure: problem background → design decision → code walkthrough → comparison with the real product → exercises.
+The main loop is finished in the first note and barely changes afterwards; every mechanism extends around it. s01–s12 build up a complete, usable agent step by step; s13 onward covers boundary concerns a real coding agent has to handle: permissions, provider compatibility, tool disclosure, multi-model collaboration, self-review. Every note follows the same structure: problem background → design decision → code walkthrough → comparison with the real product → exercises.
 
-| # | Topic | Problem it solves |
+| # | Topic | The question it answers |
 |---|---|---|
-| [s01](./s01_agent_loop/) | The agent loop | The core difference between an agent and a chatbot: a loop where the model decides when to stop |
-| [s02](./s02_tool_system/) | Tool system | Adding tools without modifying the loop; why the Edit tool requires a unique match |
-| [s03](./s03_loop_budget/) | Loop budget & correction | Detecting repeated output, spinning in place, and cascading errors; warn first, then break |
-| [s04](./s04_output_budget/) | Tool-output budget & spill | A single command's output can overflow the context; truncation loses information, spilling to disk doesn't |
-| [s05](./s05_streaming_interrupt/) | Streaming & interruption | Repairing an incomplete message sequence after Ctrl+C |
-| [s06](./s06_compaction/) | Context compaction | Keeping the original task after compaction: preserve startup messages verbatim |
-| [s07](./s07_prompt_cache/) | Prompt caching | Keeping the prefix stable to hit the cache, including on the compaction-summary call |
-| [s08](./s08_persistence/) | Session persistence & resume | Resuming a session after an interruption |
-| [s09](./s09_subagent_watchdog/) | Subagents & watchdog | Stall detection that distinguishes idle from in-tool execution; save the subagent's conclusion before terminating it |
-| [s10](./s10_prompt_assembly/) | System-prompt assembly | The prompt is assembled every turn, not hardcoded; skills load on demand |
-| [s11](./s11_agent_team/) | Multi-agent coordination | DAG task graph, deduplicating identical tasks, concurrency cap |
-| [s12](./s12_full_agent/) | Full agent assembly | Core mechanisms integrated into one loop; key-free end-to-end self-test |
-| [s13](./s13_permissions/) | Permissions & approval | Approving dangerous operations before side effects; allow/deny/ask, first match wins |
-| [s14](./s14_provider_compat/) | Provider compatibility | Handling malformed tool calls from models (names, arguments, truncation, prose) |
-| [s15](./s15_tool_disclosure/) | Progressive tool disclosure | Keeping context small with many tools; revealing tools without busting the cache |
-| [s16](./s16_moa/) | MoA multi-model deliberation | Cost analysis of adding multi-model deliberation to a tool loop; deciding against it is a valid conclusion |
+| [s01](./s01_agent_loop/) | The agent loop | What does the smallest usable agent look like? |
+| [s02](./s02_tool_system/) | Tool system | How do you keep adding tools without touching the loop? |
+| [s03](./s03_loop_budget/) | Loop budget & correction | The model spins in place or keeps erroring — how do you catch it and pull it back? |
+| [s04](./s04_output_budget/) | Tool-output budget & spill | One `cat` can overflow the context — what then? |
+| [s05](./s05_streaming_interrupt/) | Streaming & interruption | The user hits Ctrl+C mid-response — how do you repair the half-broken message history? |
+| [s06](./s06_compaction/) | Context compaction | The context is full and must be compacted — how do you not forget the original task? |
+| [s07](./s07_prompt_cache/) | Prompt caching | Same conversation — why is someone else's bill 10× cheaper? |
+| [s08](./s08_persistence/) | Session persistence & resume | The process crashed half an hour in — how does the session pick up where it left off? |
+| [s09](./s09_subagent_watchdog/) | Subagents & watchdog | A subtask hangs — how do you notice, and keep the work it already finished? |
+| [s10](./s10_prompt_assembly/) | System-prompt assembly | The system prompt keeps growing — how do you assemble it on demand? |
+| [s11](./s11_agent_team/) | Multi-agent coordination | Several agents working at once — how do they split work without duplicating or colliding? |
+| [s12](./s12_full_agent/) | Full agent assembly | What do all the previous mechanisms look like back in one loop? |
+| [s13](./s13_permissions/) | Permissions & approval | The model wants to run `rm -rf` — how do you stop it before it acts? |
+| [s14](./s14_provider_compat/) | Provider compatibility | Switch models and the tool calls come out mangled — how do you stay compatible? |
+| [s15](./s15_tool_disclosure/) | Progressive tool disclosure | Dozens of tools — how do you keep them from filling the context? |
+| [s16](./s16_moa/) | MoA multi-model deliberation | Letting several models deliberate together — is it worth it? |
+| [s17](./s17_self_evolution/) | Self-evolution review loop | Can the agent review its own conversations and distill what it learned into memory and skills? |
 | [s17](./s17_self_evolution/) | Self-evolution review loop | Forking a restricted self every N turns to distill the conversation into memory/skills; the cadence, cache, and isolation bills |
 
 ## Comparing with Reina

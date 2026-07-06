@@ -6,6 +6,22 @@
 
 笔记把 Reina 的核心机制抽出来，简化成单文件代码，按由浅入深的顺序整理成文。因此这里的机制不是照 API 文档推想的，而是实际产品中验证过的做法。
 
+Agent 的核心只有一个循环：模型说要用什么工具，代码执行并把结果喂回去，直到模型不再要工具：
+
+```js
+while (true) {
+  const msg = await chat(messages);       // 调一次模型
+  messages.push(msg);
+  if (!msg.tool_calls?.length) break;     // 模型不再要工具，这一轮结束
+
+  for (const call of msg.tool_calls) {    // 模型要用工具：执行，把结果喂回去
+    messages.push({ role: "tool", tool_call_id: call.id, content: runTool(call) });
+  }
+}
+```
+
+这十几行就是 s01 的全部核心（完整可运行版约 120 行）。笔记的其余部分讲的是：这个循环放进真实任务后会出什么问题，以及每个问题怎么解决。
+
 ![所有机制最终都建立在同一个循环上](./assets/s12-mechanism-map.svg)
 
 ## 适合谁读
@@ -31,26 +47,27 @@ AGENT_API_KEY=sk-xxx node s01_agent_loop/agent.mjs
 
 ## 目录
 
-主循环在第 1 篇写完，之后基本不再改动，所有机制都围绕它扩展。s01–s12 逐步搭出一个完整可用的 agent；s13 之后补充真实 coding agent 需要处理的边界问题：权限、Provider 兼容、工具披露、多模型协作。每篇结构一致：问题背景 → 设计决定 → 代码走读 → 真实产品对照 → 练习。
+主循环在第 1 篇写完，之后基本不再改动，所有机制都围绕它扩展。s01–s12 逐步搭出一个完整可用的 agent；s13 之后补充真实 coding agent 需要处理的边界问题：权限、Provider 兼容、工具披露、多模型协作、自我复盘。每篇结构一致：问题背景 → 设计决定 → 代码走读 → 真实产品对照 → 练习。
 
-| # | 主题 | 解决的问题 |
+| # | 主题 | 要解决的问题 |
 |---|---|---|
-| [s01](./s01_agent_loop/) | Agent 主循环 | agent 与 chatbot 的核心区别：一个由模型决定何时停止的循环 |
-| [s02](./s02_tool_system/) | 工具系统 | 新增工具不修改循环；Edit 工具唯一匹配约定的原因 |
-| [s03](./s03_loop_budget/) | 循环预算与纠偏 | 检测重复输出、原地打转、连续报错，先提醒再熔断 |
-| [s04](./s04_output_budget/) | 工具输出预算与溢出 | 单条命令输出可能撑爆上下文；截断丢信息，溢出到磁盘不丢 |
-| [s05](./s05_streaming_interrupt/) | 流式输出与中断 | Ctrl+C 之后如何修复不完整的消息序列 |
-| [s06](./s06_compaction/) | 上下文压缩 | 压缩后保留初始任务：启动消息逐字保留 |
-| [s07](./s07_prompt_cache/) | Prompt 缓存 | 保持前缀稳定以命中缓存，压缩摘要调用同样适用 |
-| [s08](./s08_persistence/) | 会话持久化与恢复 | 会话中断后可以恢复继续 |
-| [s09](./s09_subagent_watchdog/) | 子代理与看门狗 | 区分闲置与工具内执行的卡死检测，终止前保留子代理结论 |
-| [s10](./s10_prompt_assembly/) | System prompt 组装 | prompt 每轮动态拼装而非写死；skills 按需加载 |
-| [s11](./s11_agent_team/) | 多 agent 协作 | DAG 任务图、相同任务去重、并发上限 |
-| [s12](./s12_full_agent/) | 完整 agent 整合 | 核心机制整合进同一个循环；免 key 端到端自测 |
-| [s13](./s13_permissions/) | 权限与审批 | 危险操作在产生副作用前审批；allow/deny/ask 三态首条匹配 |
-| [s14](./s14_provider_compat/) | Provider 兼容层 | 处理模型输出的畸形 tool call（名字、参数、截断、散文） |
-| [s15](./s15_tool_disclosure/) | 渐进式工具披露 | 工具数量多时不撑爆上下文；解蔽时避免破坏缓存 |
-| [s16](./s16_moa/) | MoA 多模型合议 | 多模型合议接入工具循环的成本分析；评估后放弃也是有效结论 |
+| [s01](./s01_agent_loop/) | Agent 主循环 | 最小可用的 agent 长什么样 |
+| [s02](./s02_tool_system/) | 工具系统 | 工具越加越多，怎么不用每次都改循环 |
+| [s03](./s03_loop_budget/) | 循环预算与纠偏 | 模型原地打转、反复报错，怎么发现并拉回来 |
+| [s04](./s04_output_budget/) | 工具输出预算与溢出 | 一条 `cat` 的输出就能撑爆上下文，怎么办 |
+| [s05](./s05_streaming_interrupt/) | 流式输出与中断 | 用户按下 Ctrl+C，断在一半的消息记录怎么修 |
+| [s06](./s06_compaction/) | 上下文压缩 | 上下文满了要压缩，怎么不忘掉最初的任务 |
+| [s07](./s07_prompt_cache/) | Prompt 缓存 | 同样的对话，为什么有人的账单贵 10 倍 |
+| [s08](./s08_persistence/) | 会话持久化与恢复 | 进程崩了，跑了半小时的会话怎么接着跑 |
+| [s09](./s09_subagent_watchdog/) | 子代理与看门狗 | 子任务卡死了，怎么发现它并保住已完成的部分 |
+| [s10](./s10_prompt_assembly/) | System prompt 组装 | system prompt 越写越长，怎么按需拼装 |
+| [s11](./s11_agent_team/) | 多 agent 协作 | 几个 agent 同时干活，怎么分工不重复不冲突 |
+| [s12](./s12_full_agent/) | 完整 agent 整合 | 前面所有机制装回一个循环里是什么样 |
+| [s13](./s13_permissions/) | 权限与审批 | 模型要执行 `rm -rf`，怎么在动手前拦住 |
+| [s14](./s14_provider_compat/) | Provider 兼容层 | 换个模型 tool call 格式全乱，怎么兼容 |
+| [s15](./s15_tool_disclosure/) | 渐进式工具披露 | 工具有几十个，怎么不把上下文塞满 |
+| [s16](./s16_moa/) | MoA 多模型合议 | 让多个模型一起商量，到底值不值 |
+| [s17](./s17_self_evolution/) | 自进化复盘环 | agent 能不能自己复盘对话，把学到的沉淀成记忆和技能 |
 | [s17](./s17_self_evolution/) | 自进化复盘环 | 每 N 轮 fork 一个受限的自己蒸馏对话、写记忆/技能；节奏、缓存、隔离三笔账 |
 
 ## 与 Reina 的对照

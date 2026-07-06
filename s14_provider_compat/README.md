@@ -1,9 +1,6 @@
 # s14 · Provider 兼容层
 
-前面各章，循环拿到的 tool call 一直是干净的 `{ name, input }`，因为 demo 只接了一个行为规范的模型。
-实际做本地优先的 agent，需要同时接入 DeepSeek / Kimi / GLM / Qwen / 本地 Ollama 等多个模型——
-它们发出 tool call 的格式各不相同，且经常不符合各自文档的描述。本章在循环和模型之间加一层
-归一化适配，把各种畸形输出在 provider 边界处理干净。
+把 agent 换到另一个模型（DeepSeek / Kimi / GLM / Qwen / 本地 Ollama），常见的第一反应是：它突然不会用工具了。明明定义的是 `run_shell`，模型喊 `bash`；参数 `command` 写成了 `cmd`；JSON 生成到一半被截断；甚至干脆把调用写进正文散文里。本章的解法：在模型和循环之间加一层整理，把各种不规范的工具调用在边界上统一成干净的 `{ name, input }`，循环对此毫无感知。
 
 ## 常见的畸形 tool call
 
@@ -16,8 +13,7 @@
 | JSON 截断 | `max_tokens` 中途截断，`{"command":"npx vi` 就没了，引号括号都没闭合 |
 | 写进正文 | 不走 tool 通道，在正文里写一段 ` ```json {...} ``` `，或混在解释文字中间 |
 
-放弃这些模型不是本地优先的选项。合理的定位是：**这不该是循环的负担**，应在 provider 边界
-做一层归一化，循环里永远只见干净的 `{ name, input }`。归一化全部是确定性规则，不涉及模型。
+放弃这些模型不是本地优先的选项。但这也不该是循环的负担——整理逻辑全部放在 provider 边界，而且全是确定性规则，不涉及模型。
 
 ![Provider 兼容层把脏 tool call 归一化后再交给循环](../assets/s14-provider-normalize.svg)
 
@@ -49,9 +45,7 @@ node s14_provider_compat/demo.mjs
 
 ### ① 名字别名表 + ② 参数别名表
 
-两张查表。名字表把 `bash → run_shell` 收敛；参数表给每个规范工具声明它接受的键和每个键的
-可能别名，把值搬到规范键上。搬运有一条纪律：**只在规范键为空时搬运，绝不覆盖模型填对的值**——
-模型既填了 `command` 又填了 `cmd` 时，以 `command` 为准。
+两张对照表。名字表把 `bash → run_shell` 收敛；参数表列出每个规范键的常见别名，把值搬到规范键上。搬运只有一条纪律：**规范键已经有值就不动**——模型既填了 `command` 又填了 `cmd` 时，以 `command` 为准。
 
 ```js
 for (const [canonical, aliases] of Object.entries(spec)) {
@@ -64,50 +58,29 @@ for (const [canonical, aliases] of Object.entries(spec)) {
 
 ### ③ 截断 JSON 修复
 
-被截断的 JSON 与其整条丢弃，不如确定性地补完整。扫一遍字符，维护两个状态：一个**括号栈**、
-一个"当前是否在字符串里"的布尔值（需要正确处理转义，`\"` 不算字符串结束）。扫到末尾时，
-如果还停在字符串里就补一个 `"`，再按栈逆序把未配平的 `{` `[` 补成 `}` `]`，然后 `JSON.parse`。
-补不出则返回 null。
+被截断的 JSON 与其整条丢弃，不如确定性地补完整。扫一遍字符，记两个状态：括号开到第几层（一个栈）、当前是否在字符串里（注意 `\"` 转义不算字符串结束）。扫到末尾，还停在字符串里就补一个 `"`，再把没配平的 `{` `[` 倒序补成 `}` `]`，然后 `JSON.parse`。补不出就返回 null。
 
-演示③里 `{"command":"npx vitest ru` 被补成 `{"command":"npx vitest ru"}`——命令内容可能缺了
-尾部，但结构合法、可以执行，剩下的交给⑤的标记处理。
+演示③里 `{"command":"npx vitest ru` 被补成 `{"command":"npx vitest ru"}`——命令可能缺了尾巴，但结构合法、可以执行，剩下的交给⑤。
 
 ### ④ 从正文里提取对象
 
-部分模型会在正文里写调用。先尝试 ` ```json ... ``` ` 代码围栏（格式最规整），再退而求其次找
-第一个**配平**的顶层 `{ ... }`（同样用括号栈 + 字符串态扫描，避免被字符串里的 `}` 干扰）。
-演示④就是从一整段中文解释里，把中间的 `{"path":"src/config.ts"}` 精确提取出来。
+有的模型不走工具通道，把调用写在正文里。先找 ` ```json ... ``` ` 代码围栏（格式最规整），找不到再找第一个配平的顶层 `{ ... }`（同样用括号计数 + 字符串状态，避免被字符串里的 `}` 骗到）。演示④就是从一整段中文解释里，把 `{"path":"src/config.ts"}` 精确抠出来。
 
-### ⑤ 给推测结果打 fallback 标记
+### ⑤ 给猜出来的结果做记号
 
-这是整层里最重要的一步。③④的结果都是**推测**——修复和提取都可能出错。所以凡是不走正常路径
-（直接 `JSON.parse` 成功）、而是靠修复/提取得到的结果，都打一个 fallback 标记（一个 `WeakSet`
-即可）。引擎看到标记，照常执行，但追加一条 observation 告诉模型：
-"你的 JSON 没解析成功，我尽量补了，下次请直接走工具调用。"
+这是整层里最重要的一步。③④的结果都是**猜的**——修复和提取都可能出错。所以凡是不经正常 `JSON.parse` 成功、靠修复/提取得到的结果，都做一个记号（fallback 标记）。引擎看到记号照常执行，但追加一条提示："你的 JSON 没解析成功，我尽量补了，下次请直接走工具调用。"
 
-没有这个标记，一个被猜错的参数会静默执行——比直接报错更危险，因为没人知道它错了。
-有了标记，模型知道自己出了错，下一轮可以自行纠正。这回到 s02 的原则：
-报错（和"我不太确定"）是写给模型看的 UI。
+没有这个记号，猜错的参数会静默执行——比直接报错更危险，因为没人知道它错了。有了记号，模型知道自己出了错，下一轮能自行纠正（s02 的原则：报错是写给模型看的 UI）。
 
 ## 接进真实 agent
 
-在 s01 的循环里，模型返回后、派发工具前，插一步 `parseToolCall(rawName, rawArgs)`：拿到 `null`
-就回"没识别出工具调用"让它重发；拿到结果就正常派发，但如果 `wasJsonParseFallback` 为真，
-就在这次工具 observation 后多附一条提醒。循环主体不需要任何改动——所有兼容处理都封闭在
-这层适配器里。
+在 s01 的循环里，模型返回后、派发工具前，插一步 `parseToolCall(rawName, rawArgs)`：拿到 `null` 就回"没识别出工具调用"让它重发；拿到结果就正常派发，带 fallback 记号的在工具结果后多附一条提醒。循环主体一行不改——所有兼容处理都封闭在这层适配器里。
 
-## 真实产品对照
+## 与真实产品对照（延伸阅读）
 
-本章对应 Reina 的 `packages/providers/src/tool-compat.ts`：`normalizeToolName` + `toolAliases`
-管名字，`normalizeToolInput` / `pickFields` 管参数别名，`parseToolJson` 里的 `repairTruncatedJson`
-（补悬空字符串 + 逆序配平括号）和 `extractEmbeddedObject`（代码围栏 + 配平扫描）管残缺 JSON，
-推测结果的标记是一个 `WeakSet`（`wasJsonParseFallback`），与本章一一对应。相邻的
-`tool-pairing.ts` 处理另一类问题：把流式输出的 tool_call 分片按 id 重新配对，拼回完整调用。
+本章对应 Reina 的 `packages/providers/src/tool-compat.ts`：`normalizeToolName` + `toolAliases` 管名字，`normalizeToolInput` / `pickFields` 管参数别名，`parseToolJson` 里的 `repairTruncatedJson`（补悬空字符串 + 逆序配平括号）和 `extractEmbeddedObject`（代码围栏 + 配平扫描）管残缺 JSON，推测结果的标记是一个 `WeakSet`（`wasJsonParseFallback`），与本章一一对应。相邻的 `tool-pairing.ts` 处理另一类问题：把流式输出的 tool_call 分片按 id 重新配对，拼回完整调用。
 
-为什么值得单开一层？因为 Reina 的 provider 抽象要同时驱动 OpenAI 和 Anthropic 两套 API、
-底下又挂着十来个各家兼容后端。核心循环要保持 provider 中立，就必须把"这个后端 JSON 输出不规范"
-这类差异全部拦在边界上，不让它渗进引擎。Claude Code 也做类似的事——它对模型返回的
-tool input 做校验和修复，schema 对不上时给模型结构化的报错让它重试，而不是直接失败。
+为什么值得单开一层？因为 Reina 的 provider 抽象要同时驱动 OpenAI 和 Anthropic 两套 API、底下又挂着十来个各家兼容后端。核心循环要保持 provider 中立，就必须把"这个后端 JSON 输出不规范"这类差异全部拦在边界上，不让它渗进引擎。Claude Code 也做类似的事——它对模型返回的 tool input 做校验和修复，schema 对不上时给模型结构化的报错让它重试，而不是直接失败。
 
 ## 动手挑战
 
