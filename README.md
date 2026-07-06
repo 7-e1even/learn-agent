@@ -68,7 +68,6 @@ AGENT_API_KEY=sk-xxx node s01_agent_loop/agent.mjs
 | [s15](./s15_tool_disclosure/) | 渐进式工具披露 | 工具有几十个，怎么不把上下文塞满 |
 | [s16](./s16_moa/) | MoA 多模型合议 | 让多个模型一起商量，到底值不值 |
 | [s17](./s17_self_evolution/) | 自进化复盘环 | agent 能不能自己复盘对话，把学到的沉淀成记忆和技能 |
-| [s17](./s17_self_evolution/) | 自进化复盘环 | 每 N 轮 fork 一个受限的自己蒸馏对话、写记忆/技能；节奏、缓存、隔离三笔账 |
 
 ## 与 Reina 的对照
 

@@ -68,7 +68,6 @@ The main loop is finished in the first note and barely changes afterwards; every
 | [s15](./s15_tool_disclosure/) | Progressive tool disclosure | Dozens of tools — how do you keep them from filling the context? |
 | [s16](./s16_moa/) | MoA multi-model deliberation | Letting several models deliberate together — is it worth it? |
 | [s17](./s17_self_evolution/) | Self-evolution review loop | Can the agent review its own conversations and distill what it learned into memory and skills? |
-| [s17](./s17_self_evolution/) | Self-evolution review loop | Forking a restricted self every N turns to distill the conversation into memory/skills; the cadence, cache, and isolation bills |
 
 ## Comparing with Reina
 
