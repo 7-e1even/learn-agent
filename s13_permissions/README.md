@@ -1,16 +1,24 @@
 # s13 · 权限与审批
 
-前面各章的 agent 已经拿到了 `run_shell`、`write_file` 这些能改动真实环境的工具，而且没有任何约束：模型说 `git push` 就 push，说读 `.env` 就把密钥读进对话。demo 里问题不大，放到真实项目里，误删文件、外泄密钥、误推生产分支都可能发生。本章的解法：在工具执行之前加一道关卡，用一份预先写好的规则清单，决定每次调用是放行、拒绝，还是先问用户。
+本章在工具执行之前加一道关卡：用一份预先写好的规则清单，决定每次工具调用是放行、拒绝，还是先问用户。
 
-![权限规则链在工具副作用前裁决 allow / deny / ask](../assets/s13-permission-gate.svg)
+## 问题
 
-## 设计目标：自动裁决为主，必要时才问
+前面各章的 agent 已经拿到了 `run_shell`、`write_file` 这些能改动真实环境的工具，而且没有任何约束：模型说 `git push` 就 push，说读 `.env` 就把密钥读进对话。demo 里问题不大，放到真实项目里，误删文件、外泄密钥、误推生产分支都可能发生。
 
-加约束有两个极端。什么都不问：全部放行，等于没约束。什么都问：跑一次测试要点二十次"允许"，用户很快习惯性放行，审批失去意义。合理的做法在中间：大部分操作按预设规则自动判，规则没覆盖的才问用户。
+加约束有两个极端。什么都不问：全部放行，等于没约束。什么都问：跑一次测试要点二十次"允许"，用户很快习惯性放行，审批失去意义。
+
+## 解决方案
+
+合理的做法在两个极端中间：大部分操作按预设规则自动判，规则没覆盖的才问用户。
 
 规则长这样："什么工具 / 什么命令开头 / 什么路径 → allow（放行）/ deny（拒绝）/ ask（问用户）"。多条规则排成一条链，从上到下逐条比对，第一条匹配上的直接定案——下文称**首匹配**。重要判定交给确定性的数据结构、不交给模型临场发挥，是本系列的一贯原则（s03 看门狗、s11 闸门）。
 
-## 运行演示（不需要 API key）
+![权限规则链在工具副作用前裁决 allow / deny / ask](../assets/s13-permission-gate.svg)
+
+## 运行
+
+演示不需要 API key：
 
 ```sh
 node s13_permissions/demo.mjs
@@ -29,7 +37,7 @@ node s13_permissions/demo.mjs
   ❓ 问用户   write_file(src/new.ts)         无规则命中 → default
 ```
 
-## 设计：三个关键决定
+## 实现
 
 ### ① 三态：allow / deny / ask
 
@@ -77,9 +85,18 @@ export function mergeRules(globalRules, workspaceRules) {
 
 注意最后一条：项目能把 `npm test` 从"询问"提升到"放行"，却提升不了 `git push` 的 deny——所有 deny 都合并在链首，项目里即使写一条 `allow: git push` 也排在其后，永远不会命中。**放权是加白名单，不是解除限制**，而且这一点由合并顺序保证，不依赖项目配置自觉遵守。
 
-## 接进真实 agent
+### 接进真实 agent
 
 免 key 版是纯函数；接进 s01 的循环只需一步：派发工具之前先 `evaluatePermission`——`allow` 直接执行；`deny` 回一条 observation 告诉模型"该操作被拒绝，请换一种方式"；`ask` 则挂起循环、向用户发审批请求，拿到答复再继续（复用 s05 的中断/恢复思路）。裁决因此总是发生在**副作用之前**。
+
+## 练习
+
+1. 给 `ask` 加"记住选择"：用户对 `run_shell(npm test)` 点了一次"总是允许"，就往 workspace 规则里
+   追加一条 `allow`，下次同类请求不再询问。需要考虑记住的粒度是"这条命令"还是"这个前缀"：
+   记太宽（`allow run_shell *`）等于解除限制，记太窄（整条命令逐字匹配）等于没记。
+2. 本章的 `commandPrefix` 是纯前缀匹配，`git push` 能拦住 `git push origin main`，但能否拦住
+   `git   push`（多个空格）或 `git push；rm -rf /`（拼接命令）？运行验证一下，再思考为什么
+   Reina 要专门写一个 `shell-approval.ts` 把命令解析后逐段裁决，而不是简单比较前缀。
 
 ## 与真实产品对照（延伸阅读）
 
@@ -90,15 +107,6 @@ export function mergeRules(globalRules, workspaceRules) {
 生产版还多两件本章略过的事：规则文件按 mtime 缓存（避免每次求值都读盘），以及 shell 命令的审批走 `shell-approval.ts` 做更细的命令解析（把一行 `a && b` 拆成多条分别裁决，防止危险命令藏在 `&&` 后面）。三态里的 `ask` 对应桌面端弹出的审批卡片，用户点"总是允许"就把这条固化进 workspace 规则，即②③的组合。
 
 Claude Code 的权限系统采用同样的思路：allow/deny/ask 三态 + 规则匹配（`~/.claude/settings.json` 里的 `permissions.allow` / `deny`，项目级 `.claude/settings.local.json` 叠加），并且同样是 deny 无条件优先于 allow——项目级配置能提升 allow，但不能覆盖任何一层的 deny，与本章 ③ 的合并语义一致。
-
-## 动手挑战
-
-1. 给 `ask` 加"记住选择"：用户对 `run_shell(npm test)` 点了一次"总是允许"，就往 workspace 规则里
-   追加一条 `allow`，下次同类请求不再询问。需要考虑记住的粒度是"这条命令"还是"这个前缀"：
-   记太宽（`allow run_shell *`）等于解除限制，记太窄（整条命令逐字匹配）等于没记。
-2. 本章的 `commandPrefix` 是纯前缀匹配，`git push` 能拦住 `git push origin main`，但能否拦住
-   `git   push`（多个空格）或 `git push；rm -rf /`（拼接命令）？运行验证一下，再思考为什么
-   Reina 要专门写一个 `shell-approval.ts` 把命令解析后逐段裁决，而不是简单比较前缀。
 
 ---
 

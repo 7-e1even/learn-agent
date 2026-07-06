@@ -1,14 +1,20 @@
 # s10 · System prompt 组装
 
+本章代码 = s03 基底 + prompt 分段拼装（`prompt.mjs`）+ skills 目录 + `load_skill` 工具。
+
+## 问题
+
 你在 system prompt 里加了一行「当前时间：14:23:07」，账单随后涨了好几倍。原因是**前缀缓存**：主流 API 会把请求开头与上次逐字节相同的部分缓存起来，命中只收约一折的费用——而时间戳每轮都变，整个前缀每轮全额重付。另一个膨胀源是知识：把「提交规范」「审查清单」这类团队约定全文塞进 system prompt，几十个知识块每轮都在收费，真正相关的内容反而被淹没。
+
+## 解决方案
 
 本章两个解法：system prompt 按固定顺序分段拼装、段内不放会变的值，保证字节稳定；领域知识做成「技能」，只把目录（每个技能一行名字和适用场景）放进 prompt，正文用工具按需加载。
 
-本章代码 = s03 基底 + prompt 分段拼装（`prompt.mjs`）+ skills 目录 + `load_skill` 工具。
-
 ![system prompt 由稳定 section 拼装，技能正文通过 load_skill 按需加载](../assets/s10-prompt-assembly.svg)
 
-## 运行演示（不需要 API key）
+## 运行
+
+运行演示不需要 API key：
 
 ```sh
 node s10_prompt_assembly/demo.mjs
@@ -38,7 +44,9 @@ node s10_prompt_assembly/demo.mjs
 引擎一行代码没改 —— 每轮开工前重扫目录，新技能下一轮自动可见。
 ```
 
-## 三个设计决定
+## 实现
+
+机制落在三个设计决定上。
 
 ### ① 分段拼装，确定性优先
 
@@ -89,7 +97,7 @@ async function runTurn(messages) {
 
 注意拼装在一轮内只做一次：一轮里模型可能连续调用十几次工具，这些请求的 system 必须逐字节一致，所以 `system` 在 `runTurn` 开头算好、整轮复用。
 
-## 接进你的 agent
+### 接进你的 agent
 
 [agent.mjs](./agent.mjs) 相对 s03 基底的变化只有三处：`SYSTEM` 常量换成 `assembleSystemPrompt(loadSkills(...))`（每轮开工时拼装）；注册表新增 `load_skill` 工具；用户输入经 `withVolatileReminder` 附上时间再入队。主循环和看门狗没有改动。
 
@@ -104,7 +112,12 @@ if (!skill) {
 
 有 key 的话运行 `AGENT_API_KEY=sk-xxx node s10_prompt_assembly/agent.mjs`，输入「帮我把这次改动提交了」，观察模型先 `load_skill git-commit-convention` 再写提交信息。
 
-## 真实产品对照（延伸阅读）
+## 练习
+
+1. 给 SKILL.md 的 frontmatter 加 `allowed-tools: read_file run_shell` 字段（Reina 就有）：`load_skill` 返回正文时把它渲染成一行约束提示。思考一个问题——这个约束对模型是「提示」还是「强制」？要做强制，检查应该放在哪一层（提示词？dispatch？）？
+2. 把「用户规则文件」做成一个新 section：从 cwd 逐级向上收集每个 `AGENTS.md`，根目录的在前、最近的在后（就近覆盖）。文件不小且每轮都读，怎么避免重复 IO 又不错过用户的实时编辑？（提示：mtime；Reina 的 `formatUserRulesPrompt` 用 mtime 数组做缓存键。）
+
+## 与真实产品对照（延伸阅读）
 
 先补一个正文略过的取舍：③选「每轮重读」而不是「会话开始时读一次然后缓存」，是因为缓存就得配一套失效通知机制；「每轮重读」配合「确定性拼装」直接获得热插拔——没变化时字节一致、缓存照常命中，变了就付一次应付的 miss。
 
@@ -113,11 +126,6 @@ Reina 的 `packages/core/src/engine-prompt.ts` 里，`buildSystemPrompt(session)
 两个值得注意的边界处理：日期故意留在稳定前缀里（模型没有时间锚点会误判「最近」「最新」这类词），但只精确到天——一天内字节不变，跨天付一次 miss，是精度和缓存的折中。MCP 服务器名单在首次拼装时冻结成快照（`snapshotMcpServersIfNeeded`），中途服务器掉线也不改前缀字节，实际漂移由易变区的 reminder 单独提示。
 
 技能侧，`packages/core/src/skills.ts` 的 `loadSkills` 扫全局 `~/.claude/skills/` 和工作区 `<cwd>/.claude/skills/`（同名时工作区覆盖全局），每技能一个 SKILL.md，frontmatter 解析 name / description / allowed-tools，单文件上限 1MB，结果按名字排序；`formatSkillsPrompt` 每技能只注入一行，注释明确写着 "progressive disclosure"（渐进式披露），正文靠 `read_skill` 工具（本章叫 `load_skill`，同一机制）。实践中写技能，相当一部分工作量就花在 description 上。而 `engine.ts` 的 `runTurn` 第一行就是 `await this.refreshContext()`——每轮从磁盘重载技能，这正是「agent 用工具给自己装技能、下一轮自动生效」能在 Reina 里零引擎改动成立的原因。
-
-## 动手挑战
-
-1. 给 SKILL.md 的 frontmatter 加 `allowed-tools: read_file run_shell` 字段（Reina 就有）：`load_skill` 返回正文时把它渲染成一行约束提示。思考一个问题——这个约束对模型是「提示」还是「强制」？要做强制，检查应该放在哪一层（提示词？dispatch？）？
-2. 把「用户规则文件」做成一个新 section：从 cwd 逐级向上收集每个 `AGENTS.md`，根目录的在前、最近的在后（就近覆盖）。文件不小且每轮都读，怎么避免重复 IO 又不错过用户的实时编辑？（提示：mtime；Reina 的 `formatUserRulesPrompt` 用 mtime 数组做缓存键。）
 
 ---
 

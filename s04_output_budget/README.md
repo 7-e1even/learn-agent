@@ -1,12 +1,16 @@
 # s04 · 工具输出预算与溢出
 
-你让 agent 检查一个导出文件，它顺手执行了 `cat data.json`——一个 2MB 的文件。轻则这轮请求直接失败：2MB 约等于五十多万 token，超出模型一次能读的上限（上下文窗口），API 返回 400；就算窗口装得下，这五十万 token 也从此留在对话历史里，每一轮都重新计费——一次 cat，成本翻倍。本章的解法：给工具输出设预算，超出的部分完整存到磁盘（落盘），对话里只留一张"取件条"——写明存在哪、有多大、怎么取——不丢任何信息。
+工具输出可能大到撑爆上下文窗口。本章给它设预算，超预算的部分完整落盘，对话里只留一张"取件条"。本章代码 = s03 基底 + 溢出机制模块 [spill.mjs](./spill.mjs)。
 
-本章代码 = s03 基底 + 溢出机制模块 [spill.mjs](./spill.mjs)。
+## 问题
 
-## 截断为什么不够
+你让 agent 检查一个导出文件，它顺手执行了 `cat data.json`——一个 2MB 的文件。轻则这轮请求直接失败：2MB 约等于五十多万 token，超出模型一次能读的上限（上下文窗口），API 返回 400；就算窗口装得下，这五十万 token 也从此留在对话历史里，每一轮都重新计费——一次 cat，成本翻倍。
 
 s02 给 `read_file` 加过一个 50KB 截断。但截掉的部分模型永远看不到，它也不知道自己错过了什么——如果问题恰好在第 51KB，就查不出来了。这三种坏结局（撑爆窗口、持续计费、截断丢信息）的共同根源是：**模型每轮能看到多少，完全没有预算约束**。
+
+## 解决方案
+
+给工具输出设预算，超出的部分完整存到磁盘（落盘），对话里只留一张"取件条"——写明存在哪、有多大、怎么取——不丢任何信息。
 
 解法不是截得更狠。截断和溢出是两种思路：
 
@@ -18,7 +22,42 @@ s02 给 `read_file` 加过一个 50KB 截断。但截掉的部分模型永远看
 
 ![工具输出超预算时把完整内容落盘，只把预览和指针放回上下文](../assets/s04-output-spill.svg)
 
-## 设计：四个关键决定
+## 运行
+
+不需要 API key：
+
+```sh
+node s04_output_budget/demo.mjs
+```
+
+三个场景，真实输出节选：
+
+```
+━━━ 场景一：单条 2MB 输出（模拟 cat 大文件）━━━
+  原始输出：2097212 字符
+  回给模型：2144 字符（压到 0.10%）
+  落盘全文：.agent-spill\1783040027411-7dc4a787.txt
+
+━━━ 场景二：一轮 4 条输出合计超总量（largest-first 溢出）━━━
+  整轮总量：150000 → 92140 字符（预算 100000）
+  ⤵ 溢出  run_shell(git log)：60000 → 2140 字符
+  · 保留  run_shell(grep -r)：30000 → 30000 字符
+  · 保留  run_shell(ls -laR)：30000 → 30000 字符
+  · 保留  read_file(src/app.js)：30000 → 30000 字符（read_file 不落盘副本，自带 offset/limit）
+
+━━━ 场景三：vitest 风格日志的重要性压缩 ━━━
+  394 行 → 13 行，省 97.0%（错误行一行没丢）
+  压缩后的中段（FAIL 块完整保留）：
+     FAIL  src/billing.test.ts > charges the right amount
+     AssertionError: expected 1099 to be 999
+         at src/billing.test.ts:42:15
+```
+
+有 key 的话跑 `AGENT_API_KEY=sk-xxx node s04_output_budget/agent.mjs`，让它 cat 一个大文件——你会看到紫色的 `⤵ 溢出` 行，然后模型拿着指针自己去 read_file 取细节。
+
+## 实现
+
+四个关键决定。
 
 ### ① 指针的三要素：在哪、多大、怎么取
 
@@ -77,38 +116,12 @@ body += `\n…(文件共 ${lines.length} 行，本次返回第 ${start}–${end}
 
 压缩会不会丢信息？不会——折叠真的发生时，全文同样落盘、同样给指针。压缩决定"回给模型多少"，落盘保证"完整保存"。
 
-## 运行方式（不需要 API key）
+## 练习
 
-```sh
-node s04_output_budget/demo.mjs
-```
+1. 现在的 `excerpt` 固定"头部为主、尾部 200 字符"。对失败的测试日志这个比例是错的——总结和 exit code 在尾部。给 `spillOne` 加一个 `mode: "head" | "tail"` 参数，让 `run_shell` 的失败输出保尾部。判定"该保哪头"的信号已经在 records 里了（提示：`status`）。
+2. 一场长会话会在 `.agent-spill/` 里积累几十个文件，谁来删？设计一个清理策略并想清楚什么时候删是安全的——指针还留在 messages 历史里时删掉文件，模型按指针去读就会失败。（这个问题在 s06 会更突出：压缩历史时，指针是保还是弃？）
 
-三个场景，真实输出节选：
-
-```
-━━━ 场景一：单条 2MB 输出（模拟 cat 大文件）━━━
-  原始输出：2097212 字符
-  回给模型：2144 字符（压到 0.10%）
-  落盘全文：.agent-spill\1783040027411-7dc4a787.txt
-
-━━━ 场景二：一轮 4 条输出合计超总量（largest-first 溢出）━━━
-  整轮总量：150000 → 92140 字符（预算 100000）
-  ⤵ 溢出  run_shell(git log)：60000 → 2140 字符
-  · 保留  run_shell(grep -r)：30000 → 30000 字符
-  · 保留  run_shell(ls -laR)：30000 → 30000 字符
-  · 保留  read_file(src/app.js)：30000 → 30000 字符（read_file 不落盘副本，自带 offset/limit）
-
-━━━ 场景三：vitest 风格日志的重要性压缩 ━━━
-  394 行 → 13 行，省 97.0%（错误行一行没丢）
-  压缩后的中段（FAIL 块完整保留）：
-     FAIL  src/billing.test.ts > charges the right amount
-     AssertionError: expected 1099 to be 999
-         at src/billing.test.ts:42:15
-```
-
-有 key 的话跑 `AGENT_API_KEY=sk-xxx node s04_output_budget/agent.mjs`，让它 cat 一个大文件——你会看到紫色的 `⤵ 溢出` 行，然后模型拿着指针自己去 read_file 取细节。
-
-## 与真实产品对照
+## 与真实产品对照（延伸阅读）
 
 本章是 Reina 输出管线的简化版，生产实现分两层：
 
@@ -120,11 +133,6 @@ node s04_output_budget/demo.mjs
 日志压缩在 `packages/tools/src/log-compress.ts`（从 headroomlabs/headroom 的 Rust 实现移植），比本章多一个细节：把行里的数字/十六进制地址归一化后，相邻近似重复的行折叠成 `(line) ×N`。真实 vitest 输出实测省约 65%；eslint 输出则是 safe no-op——省不到 15% 阈值，原样返回。`REINA_LOG_COMPRESS=0` 可整体关闭。
 
 Claude Code 的同类行为：Bash 工具输出超过 30,000 字符会截断——超长命令后看到的 "output truncated" 就是它的观测预算在工作。
-
-## 练习挑战
-
-1. 现在的 `excerpt` 固定"头部为主、尾部 200 字符"。对失败的测试日志这个比例是错的——总结和 exit code 在尾部。给 `spillOne` 加一个 `mode: "head" | "tail"` 参数，让 `run_shell` 的失败输出保尾部。判定"该保哪头"的信号已经在 records 里了（提示：`status`）。
-2. 一场长会话会在 `.agent-spill/` 里积累几十个文件，谁来删？设计一个清理策略并想清楚什么时候删是安全的——指针还留在 messages 历史里时删掉文件，模型按指针去读就会失败。（这个问题在 s06 会更突出：压缩历史时，指针是保还是弃？）
 
 ---
 

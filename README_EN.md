@@ -47,7 +47,7 @@ Read from s01 in order, running each note's code alongside its README.
 
 ## Contents
 
-The main loop is finished in the first note and barely changes afterwards; every mechanism extends around it. s01–s12 build up a complete, usable agent step by step; s13 onward covers boundary concerns a real coding agent has to handle: permissions, provider compatibility, tool disclosure, multi-model collaboration, self-review. Every note follows the same structure: problem background → design decision → code walkthrough → comparison with the real product → exercises.
+The main loop is finished in the first note and barely changes afterwards; every mechanism extends around it. s01–s12 build up a complete, usable agent step by step; s13 onward covers boundary concerns a real coding agent has to handle: permissions, provider compatibility, tool disclosure, multi-model collaboration, self-review. Every note follows the same structure: problem → solution → run it → implementation → exercises → comparison with the real product.
 
 | # | Topic | The question it answers |
 |---|---|---|

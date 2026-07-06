@@ -1,34 +1,59 @@
 # s08 · 会话持久化与恢复
 
-agent 干了半小时的活：几十轮对话、二十次工具调用。你按错了 Ctrl+C，或终端误关、笔记本没电——重新打开，它什么都不记得。前几章的 agent 都这样：`messages` 只存在内存里。本章把会话写到磁盘，崩溃后原样恢复，做法是**追加式事件日志 + 重放**。
-
-常见的第一反应是"存成 JSON 文件，每次变化整个重写"。这个方案有隐患，先讲清楚为什么。
-
-![追加式 JSONL 事件日志通过重放恢复状态，坏掉的末尾半行可以跳过](../assets/s08-event-log-replay.svg)
+本章把会话写到磁盘，崩溃后原样恢复，做法是**追加式事件日志 + 重放**。
 
 本章代码 = s03 的最小 agent 循环 + [store.mjs](./store.mjs)（事件日志与重放）。
 
-## 运行演示（不需要 API key）
+## 问题
 
-```sh
-node s08_persistence/demo.mjs
-```
+agent 干了半小时的活：几十轮对话、二十次工具调用。你按错了 Ctrl+C，或终端误关、笔记本没电——重新打开，它什么都不记得。前几章的 agent 都这样：`messages` 只存在内存里。
 
-三个场景，全部真实写磁盘、真实模拟崩溃。输出节选：
+常见的第一反应是"存成 JSON 文件，每次变化整个重写"。这个方案有隐患——demo 场景一真实写磁盘、真实模拟崩溃，展示了这个现场：
 
 ```
 ━━━ 场景一：全量重写 JSON，崩溃在写到一半时 ━━━
   磁盘上留下 124/207 字节的 session.json，尝试恢复：
   ✗ JSON.parse 失败：Unterminated string in JSON at position 124 (line 7 column 27)
   ✗ 整个会话报废 —— 不止最后一条消息，之前的历史也一起没了。
+```
 
+## 解决方案
+
+落盘的不是状态快照，而是事件：每发生一件事就往 JSONL 文件末尾追加一行，已写下的字节永远不被触碰；恢复时逐行重放事件，把 `messages` 重新推导出来。崩溃的影响从"整个文件可能写坏"缩小到"最后一行可能写了一半"——跳过那行即可：丢一条消息，不丢整个会话。
+
+![追加式 JSONL 事件日志通过重放恢复状态，坏掉的末尾半行可以跳过](../assets/s08-event-log-replay.svg)
+
+## 运行
+
+免 key 演示：
+
+```sh
+node s08_persistence/demo.mjs
+```
+
+三个场景，全部真实写磁盘、真实模拟崩溃（场景一的输出见上文"问题"）。场景三的输出节选：
+
+```
 ━━━ 场景三：崩溃把最后一行写了一半 ━━━
   往同一个 .jsonl 追加了半行（49/98 字节），再次重放：
   ✓ 恢复出 4 条消息，跳过 1 行损坏数据
   ✓ 只丢了崩溃瞬间那一条，之前的全部历史完好。
 ```
 
-## 设计：四个关键决定
+接上真实模型，启动时分岔：带 `--resume <id>` 就重放恢复，否则开新会话并打印 id：
+
+```sh
+AGENT_API_KEY=sk-xxx node agent.mjs
+# 新会话 ses_mr47xdu8_sgf8（落盘于 …/.sessions/ses_mr47xdu8_sgf8.jsonl）
+# 下次续上：node agent.mjs --resume ses_mr47xdu8_sgf8
+
+AGENT_API_KEY=sk-xxx node agent.mjs --resume ses_mr47xdu8_sgf8
+# 已恢复会话 ses_mr47xdu8_sgf8：14 条消息，5 次工具调用
+```
+
+验收：跟它聊两轮、让它读个文件，Ctrl+C 退出，再 `--resume` 回来问"刚才聊到哪了"——它应该答得上来。s03 看门狗注入的纠偏消息也走 `pushMessage`（见下文"实现"）：恢复出的会话必须和退出前一致。
+
+## 实现
 
 ### ① 为什么"每次全量重写 JSON"不可靠
 
@@ -94,7 +119,7 @@ try {
 
 落盘的 `tool_call` 事件带着这个 status。从此审计、重放、监督逻辑都读字段，不再解析文案。
 
-## 接进你的 agent
+### 接进你的 agent
 
 [agent.mjs](./agent.mjs) 是 s03 的 agent + 落盘。关键改动两处。第一，消息只从一个入口进数组——内存和磁盘一步完成：
 
@@ -105,20 +130,14 @@ function pushMessage(message) {
 }
 ```
 
-第二，启动时分岔：带 `--resume <id>` 就重放恢复，否则开新会话并打印 id：
+第二，启动时分岔：带 `--resume <id>` 就重放恢复，否则开新会话并打印 id（运行命令见上文"运行"）。
 
-```sh
-AGENT_API_KEY=sk-xxx node agent.mjs
-# 新会话 ses_mr47xdu8_sgf8（落盘于 …/.sessions/ses_mr47xdu8_sgf8.jsonl）
-# 下次续上：node agent.mjs --resume ses_mr47xdu8_sgf8
+## 练习
 
-AGENT_API_KEY=sk-xxx node agent.mjs --resume ses_mr47xdu8_sgf8
-# 已恢复会话 ses_mr47xdu8_sgf8：14 条消息，5 次工具调用
-```
+1. 给 `store.mjs` 加一个 `compacted` 事件和对应的重放逻辑：记录"从第 N 条消息之前已被压缩为摘要 S"，重放时用摘要替换被压缩的区间。s06 的压缩机制落盘之后，才算完整闭环。
+2. 思考题：demo 场景三里半截行恰好在文件末尾，跳过它显然安全。但如果坏行出现在文件中间（比如磁盘坏块），跳过一条 `message` 可能让后面的 `tool` 消息变成"孤儿"（tool_call_id 对不上助手消息）——API 会拒绝这样的序列。恢复时该怎么检测并修剪这种断链？（提示：s05 处理 Ctrl+C 留下的残缺消息序列用的是同一套办法。）
 
-验收：跟它聊两轮、让它读个文件，Ctrl+C 退出，再 `--resume` 回来问"刚才聊到哪了"——它应该答得上来。s03 看门狗注入的纠偏消息也走 `pushMessage`：恢复出的会话必须和退出前一致。
-
-## 真实产品对照（延伸阅读）
+## 与真实产品对照（延伸阅读）
 
 本章机制对应 Reina（本系列对照的生产级 agent）的 `packages/core/src/rollout.ts`（参照 openai/codex 的 rollout recorder 建模）：每个会话一个 `.reina/sessions/<id>.jsonl`，每次状态变化 append 一行 `{ ts, type, ... }`。示例版三种事件类型，生产版二十多种（`message` / `tool_call` / `tool_update` / `compacted` / `usage` / `todos`……）。几个值得参考的生产细节：
 
@@ -129,11 +148,6 @@ AGENT_API_KEY=sk-xxx node agent.mjs --resume ses_mr47xdu8_sgf8
 - 仅有的"全量重写"出现在迁移旧格式时（`migrateJsonSnapshotToJsonl`），而且写法是先写临时文件再 `rename` 进位——rename 在同一文件系统上是原子的，崩溃也不会留下半个 jsonl。
 
 另一个可观察的例子：Claude Code 的会话也是 JSONL（`~/.claude/projects/<项目>/**.jsonl`），`--resume` 的底层就是同一套重放事件流。
-
-## 练习挑战
-
-1. 给 `store.mjs` 加一个 `compacted` 事件和对应的重放逻辑：记录"从第 N 条消息之前已被压缩为摘要 S"，重放时用摘要替换被压缩的区间。s06 的压缩机制落盘之后，才算完整闭环。
-2. 思考题：demo 场景三里半截行恰好在文件末尾，跳过它显然安全。但如果坏行出现在文件中间（比如磁盘坏块），跳过一条 `message` 可能让后面的 `tool` 消息变成"孤儿"（tool_call_id 对不上助手消息）——API 会拒绝这样的序列。恢复时该怎么检测并修剪这种断链？（提示：s05 处理 Ctrl+C 留下的残缺消息序列用的是同一套办法。）
 
 ---
 

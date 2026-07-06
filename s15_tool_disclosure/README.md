@@ -1,16 +1,22 @@
 # s15 · 渐进式工具披露
 
-工具只有三五个时一切正常；接上 MCP、工具涨到几十个之后，每轮请求都要把全部工具定义（名字 + 描述 + JSON schema）原样发一遍，几千 token 轮轮都付。更隐蔽的是：工具数组一变，prompt 缓存整段失效，账单不降反升。本章的解法：冷启动只挂少数常用工具和一个搜索入口，其余工具等模型需要时再搜出来用——并避开一个反直觉的缓存坑。
+本章的解法：冷启动只挂少数常用工具和一个搜索入口，其余工具等模型需要时再搜出来用——并避开一个反直觉的缓存坑。
 
-![渐进式工具披露让搜索结果进消息尾部，而不是回灌 provider tools 数组](../assets/s15-tool-disclosure.svg)
+## 问题
 
-## 问题：每轮都在为没用到的工具付费
+工具只有三五个时一切正常；接上 MCP、工具涨到几十个之后，每轮请求都要把全部工具定义（名字 + 描述 + JSON schema）原样发一遍，几千 token 轮轮都付。更隐蔽的是：工具数组一变，prompt 缓存整段失效，账单不降反升。
 
 第一笔账好懂：没用到的工具定义，每轮白付。第二笔来自 s07（缓存命中工程）：tools 数组和 system 一起位于缓存前缀的最前部（Anthropic 的序列化顺序是 tools 在前），数组一变，前缀从头失效，后面全部按全价重算。
 
-自然的想法：不常用的工具先藏起来（标成 `deferred`），只放一个 `search_tool` 入口；模型需要时按关键词搜，搜到后再放开给模型用——这个"放开"的动作，下文称**解蔽**。冷启动的 tools 数组因此明显变小。但解蔽这个动作如果实现不当，会反过来砸掉缓存。
+## 解决方案
 
-## 运行演示（不需要 API key）
+自然的想法：不常用的工具先藏起来（标成 `deferred`），只放一个 `search_tool` 入口；模型需要时按关键词搜，搜到后再放开给模型用——这个"放开"的动作，下文称**解蔽**。冷启动的 tools 数组因此明显变小。但解蔽这个动作如果实现不当，会反过来砸掉缓存：把搜到的工具加回 tools 数组，每解蔽一次，数组变一次，缓存失效一次。正确做法是数组恒定——搜到的工具永不加回数组，schema 走搜索结果文本，调用走常驻的代理工具。
+
+![渐进式工具披露让搜索结果进消息尾部，而不是回灌 provider tools 数组](../assets/s15-tool-disclosure.svg)
+
+## 运行
+
+演示不需要 API key：
 
 ```sh
 node s15_tool_disclosure/demo.mjs
@@ -32,7 +38,7 @@ node s15_tool_disclosure/demo.mjs
 
 注意坏做法那行"复用 99%"不代表只损失 1%：新工具追加在尾部，前面 99% 的字节确实没变，但 tools 块是一个闭合的整体，末尾一变，服务商就视为整块变更，tools + system + 全部历史一起按全价重算。差一个字节，等于整块失效。
 
-## 设计：两个关键决定
+## 实现
 
 ### ① deferred 目录：冷启动只放入口，不放全部工具
 
@@ -46,9 +52,18 @@ node s15_tool_disclosure/demo.mjs
 
 一个重要前提：Anthropic 没有服务端的按需披露能力，这套逻辑只能放在客户端做——为什么不能照抄 Codex 的做法，见文末对照。
 
-## 接进真实 agent
+### 接进真实 agent
 
 在 s10 的 prompt 组装里，冷启动 tools 只放 direct 类 + `search_tool` + `run_tool`；deferred 目录作为一段"可检索工具清单"注入。模型调 `search_tool("发通知")` → 引擎回搜索结果（含 schema 摘要）→ 模型调 `run_tool({name:"notify_user", input:{...}})` → 引擎按 name 派发到真实工具。全程 tools 数组不变。权限（s13）按**目标工具**裁决，不是按 `run_tool` 本身裁决——这是接线时最容易出错的地方。
+
+## 练习
+
+1. 给演示的"好做法"接一个真实约束：`run_tool` 调用 deferred 工具时，权限要按目标工具裁决
+   （复用 s13）。写一版 `run_tool` 的派发：`run_tool({name:"delete_all"})` 应触发 `delete_all` 的
+   deny/ask，而不是 `run_tool` 自己的。思考如果漏了这步，会留下多大的漏洞。
+2. 阈值门控：工具总数少（比如 < 10）时，全 direct 反而更好——省掉一次 `search_tool` 往返的延迟。
+   给披露加一个 `auto:N`：总数 ≤ N 就不 defer，> N 才进披露模式。N 该按什么标定？（提示：
+   权衡"多一次搜索往返的延迟"和"多几千 token 的冷启动"哪个代价更高。）
 
 ## 与真实产品对照（延伸阅读）
 
@@ -57,15 +72,6 @@ node s15_tool_disclosure/demo.mjs
 Reina 的这套骨架在 `packages/tools/src/registry.ts`（`isDeferredByDefault` 默认白名单、`deferredToolDescriptors` / `directToolDescriptors` 分桶、`resolveExposedTools` 每轮按已解蔽集合重建数组）和 `search-tool.ts`（检索）。检索排序用了 TF-IDF cosine + 关键词混合，并加了 CJK 分词（中日韩按字 unigram + bigram），比 Codex 那套"中文拼音化再 BM25"精度高。但边界也很明确：**词法检索跨不了语言**（中文 query 搜不到英文工具），这是本质限制，Codex / Claude Code 至今也没上向量检索；对 agent 而言影响不大，因为它看到的工具目录本就是英文的，自然用英文搜索。
 
 需要说明的是：Reina 目前的解蔽仍会回灌数组（即本章所说的问题），"数组恒定 + 代理执行"是 `docs/progressive-tool-disclosure-plan.md` 里规划的方向。Claude Code 的可观察行为思路一致：核心工具常驻，MCP 等大批量工具标记为 deferred、只露名字；模型先调 `ToolSearch` 按需检索，schema 通过搜索结果进入上下文（缓存前缀的尾部，天然安全）——冷启动数组小而稳定，即①+②的组合。
-
-## 动手挑战
-
-1. 给演示的"好做法"接一个真实约束：`run_tool` 调用 deferred 工具时，权限要按目标工具裁决
-   （复用 s13）。写一版 `run_tool` 的派发：`run_tool({name:"delete_all"})` 应触发 `delete_all` 的
-   deny/ask，而不是 `run_tool` 自己的。思考如果漏了这步，会留下多大的漏洞。
-2. 阈值门控：工具总数少（比如 < 10）时，全 direct 反而更好——省掉一次 `search_tool` 往返的延迟。
-   给披露加一个 `auto:N`：总数 ≤ N 就不 defer，> N 才进披露模式。N 该按什么标定？（提示：
-   权衡"多一次搜索往返的延迟"和"多几千 token 的冷启动"哪个代价更高。）
 
 ---
 
