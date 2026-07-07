@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="430" viewBox="0 0 920 430" role="img" aria-labelledby="title desc">
+  <title id="title">s18 completion gate</title>
+  <desc id="desc">declare_audit_done passes the goal gate and an independent judge before the autopilot loop is allowed to close.</desc>
+  <style>
+    .bg{fill:#f8fafc}.box{fill:#fff;stroke:#334155;stroke-width:2;rx:12}.deny{fill:#fee2e2}.allow{fill:#dcfce7}.ask{fill:#fef3c7}.rule{fill:#e0f2fe}.label{font:700 22px Arial,"Microsoft YaHei",sans-serif;fill:#0f172a}.txt{font:16px Arial,"Microsoft YaHei",sans-serif;fill:#334155}.small{font:13px Arial,"Microsoft YaHei",sans-serif;fill:#475569}.arrow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}.back{stroke:#dc2626;stroke-width:2;fill:none;stroke-dasharray:6 6;marker-end:url(#arrowr)}.dash{stroke:#94a3b8;stroke-width:2;fill:none;stroke-dasharray:6 6;marker-end:url(#arrow)}
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker>
+    <marker id="arrowr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#dc2626"/></marker>
+  </defs>
+  <rect class="bg" width="920" height="430"/>
+  <text x="40" y="48" class="label">完成门：declare_audit_done 要过两道闸，循环才许关</text>
+
+  <rect class="box" x="42" y="120" width="158" height="86"/>
+  <text x="121" y="152" text-anchor="middle" class="txt">goal 续跑循环</text>
+  <text x="121" y="175" text-anchor="middle" class="small">s03 · 每轮带预算</text>
+  <text x="121" y="193" text-anchor="middle" class="small">和上轮裁判反馈</text>
+
+  <rect class="box" x="252" y="120" width="168" height="86"/>
+  <text x="336" y="152" text-anchor="middle" class="txt">declare_audit_done</text>
+  <text x="336" y="175" text-anchor="middle" class="small">status + summary</text>
+  <text x="336" y="193" text-anchor="middle" class="small">完成 = 工具调用</text>
+
+  <rect class="rule" x="472" y="120" width="168" height="86"/>
+  <text x="556" y="150" text-anchor="middle" class="txt">闸一 goal gate</text>
+  <text x="556" y="173" text-anchor="middle" class="small">合同全收口？</text>
+  <text x="556" y="191" text-anchor="middle" class="small">mark_goal_met / cancel</text>
+
+  <rect class="rule" x="692" y="120" width="182" height="86"/>
+  <text x="783" y="150" text-anchor="middle" class="txt">闸二 独立裁判</text>
+  <text x="783" y="173" text-anchor="middle" class="small">压缩 trace · temp 0</text>
+  <text x="783" y="191" text-anchor="middle" class="small">没有具体证据不放行</text>
+
+  <path class="arrow" d="M200 163 H249"/>
+  <path class="arrow" d="M420 163 H469"/>
+  <path class="arrow" d="M640 163 H689"/>
+
+  <rect class="deny" x="252" y="300" width="250" height="76"/>
+  <text x="377" y="330" text-anchor="middle" class="txt">拒绝 → 反馈回循环</text>
+  <text x="377" y="354" text-anchor="middle" class="small">重开未达标 goal · 下次先撞闸一</text>
+
+  <rect class="allow" x="660" y="300" width="214" height="76"/>
+  <text x="767" y="330" text-anchor="middle" class="txt">循环关闭</text>
+  <text x="767" y="354" text-anchor="middle" class="small">autopilot done</text>
+
+  <path class="back" d="M556 206 C540 258 460 280 420 300"/>
+  <path class="back" d="M783 206 C760 250 540 268 470 298"/>
+  <path class="back" d="M252 338 C130 330 110 260 116 210"/>
+  <path class="arrow" d="M783 206 C780 240 772 260 768 297"/>
+
+  <rect class="ask" x="42" y="252" width="150" height="56"/>
+  <text x="117" y="275" text-anchor="middle" class="small">防困死：连拒 3 轮</text>
+  <text x="117" y="295" text-anchor="middle" class="small">→ fail-open 放行</text>
+  <path class="dash" d="M192 280 C400 286 560 320 657 334"/>
+</svg>

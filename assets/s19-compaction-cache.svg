@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="430" viewBox="0 0 920 430" role="img" aria-labelledby="title desc">
+  <title id="title">s19 compaction cache reuse</title>
+  <desc id="desc">The summary call reuses the main agent's just-cached system+tools+history prefix; an independent request hits nothing.</desc>
+  <style>
+    .bg{fill:#f8fafc}.seg{stroke:#334155;stroke-width:1.6}.pre{fill:#e0f2fe}.hit{fill:#dcfce7}.miss{fill:#fee2e2}.new{fill:#fef3c7}.label{font:700 22px Arial,"Microsoft YaHei",sans-serif;fill:#0f172a}.txt{font:15px Arial,"Microsoft YaHei",sans-serif;fill:#334155}.small{font:13px Arial,"Microsoft YaHei",sans-serif;fill:#475569}.rowl{font:700 15px Arial,"Microsoft YaHei",sans-serif;fill:#0f172a}.dash{stroke:#94a3b8;stroke-width:2;fill:none;stroke-dasharray:6 6;marker-end:url(#arrow)}
+  </style>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker></defs>
+  <rect class="bg" width="920" height="430"/>
+  <text x="40" y="46" class="label">摘要调用怎么计费：骑主 agent 刚缓存的前缀，还是从零起一个请求</text>
+
+  <text x="40" y="102" class="rowl">主 agent 上一轮请求（刚写进缓存）</text>
+  <rect class="seg pre" x="40" y="114" width="130" height="44" rx="7"/><text x="105" y="141" text-anchor="middle" class="txt">system</text>
+  <rect class="seg pre" x="174" y="114" width="90" height="44" rx="7"/><text x="219" y="141" text-anchor="middle" class="txt">tools</text>
+  <rect class="seg pre" x="268" y="114" width="380" height="44" rx="7"/><text x="458" y="141" text-anchor="middle" class="txt">history（即将被压的切片）</text>
+  <rect class="seg pre" x="652" y="114" width="120" height="44" rx="7"/><text x="712" y="141" text-anchor="middle" class="txt">最近消息</text>
+  <text x="790" y="141" class="small">← 缓存前缀</text>
+
+  <text x="40" y="212" class="rowl">摘要 · 独立请求</text>
+  <rect class="seg miss" x="40" y="224" width="150" height="44" rx="7"/><text x="115" y="251" text-anchor="middle" class="txt">摘要 system</text>
+  <rect class="seg miss" x="194" y="224" width="430" height="44" rx="7"/><text x="409" y="251" text-anchor="middle" class="txt">扁平化的历史文本</text>
+  <text x="640" y="251" class="small">命中 0% · 切片全价重读</text>
+
+  <text x="40" y="322" class="rowl">摘要 · 前缀复用（快路径）</text>
+  <rect class="seg hit" x="40" y="334" width="130" height="44" rx="7"/><text x="105" y="361" text-anchor="middle" class="txt">system</text>
+  <rect class="seg hit" x="174" y="334" width="90" height="44" rx="7"/><text x="219" y="361" text-anchor="middle" class="txt">tools</text>
+  <rect class="seg hit" x="268" y="334" width="380" height="44" rx="7"/><text x="458" y="361" text-anchor="middle" class="txt">原生切片（不扁平、不修剪）</text>
+  <rect class="seg new" x="652" y="334" width="150" height="44" rx="7"/><text x="727" y="361" text-anchor="middle" class="txt">围栏 + 摘要指令</text>
+  <text x="40" y="410" class="small">绿 = 命中缓存按 1 折计 · 黄 = 唯一全价的新增 · 条件：同 model+provider；模型跑偏调工具 → 回退独立请求</text>
+
+  <path class="dash" d="M105 158 V330"/>
+  <path class="dash" d="M219 158 V330"/>
+  <path class="dash" d="M458 158 V330"/>
+</svg>
