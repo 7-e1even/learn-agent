@@ -1,53 +1,25 @@
-# learn-agent · Advanced Notes on Building an AI Agent
+# learn-agent · Notes from Building an AI Agent
 
 [简体中文](./README.md) · **English**
 
-A series of advanced notes I compiled while developing [Reina](https://github.com/Reina-Agent/Reina), a desktop AI agent, covering how coding agents (tools like Claude Code, Codex, opencode) are implemented internally. Each note covers one mechanism and comes with a zero-dependency, single-file Node program you can run directly.
-
-The notes extract Reina's core mechanisms, simplify them into single-file programs, and organize them in progressive order. The mechanisms here are not guessed from API docs — they are approaches validated in a real product.
-
-At its core, an agent is one loop: the model asks for a tool, your code runs it and feeds the result back, until the model stops asking:
-
-```js
-while (true) {
-  const msg = await chat(messages);       // call the model once
-  messages.push(msg);
-  if (!msg.tool_calls?.length) break;     // no more tool requests — turn is over
-
-  for (const call of msg.tool_calls) {    // run each tool, feed the result back
-    messages.push({ role: "tool", tool_call_id: call.id, content: runTool(call) });
-  }
-}
-```
-
-These fifteen-odd lines are the entire core of s01 (the full runnable version is about 120 lines). The rest of the notes cover what goes wrong once this loop meets real tasks, and how to fix each problem.
+Notes I took while developing [Reina](https://github.com/Reina-Agent/Reina), a desktop AI agent, covering how coding agents (tools like Claude Code, Codex, opencode) work internally. Each note covers one mechanism, simplified from Reina's production implementation into a zero-dependency, single-file, runnable Node program — so these approaches aren't guessed from API docs; they're validated in a real product.
 
 ![every mechanism builds on the same loop](./assets/s12-mechanism-map.svg)
 
-## Who this is for
-
-- You have built an agent demo, but it runs into problems on real tasks: idle looping, context overflow, drifting off task;
-- You use Claude Code daily and want to know how compaction, caching, subagents, and permission gates are implemented internally;
-- You need to ship an agent at work and want a list of mechanisms validated in practice.
-
-The basic agent loop is simple, but between "it runs" and "it's usable" sits a full layer of engineering: cost control, context management, caching, persistence, concurrency, permissions. Each note solves one of these problems.
-
 ## Running the code
 
-All code is zero-dependency and runs on Node 18+, with any OpenAI-compatible API key (DeepSeek / Kimi / GLM / OpenRouter / local Ollama):
+Node 18+, zero dependencies:
 
 ```sh
 git clone https://github.com/7-e1even/learn-agent && cd learn-agent
 AGENT_API_KEY=sk-xxx node s01_agent_loop/agent.mjs
 ```
 
-If you don't have a key, [s12](./s12_full_agent/) has a self-test mode that runs the core mechanisms end-to-end without one.
-
-Read from s01 in order, running each note's code alongside its README.
+Any OpenAI-compatible API key works (DeepSeek / Kimi / GLM / OpenRouter / local Ollama); without one, most notes' `demo.mjs` and [s12](./s12_full_agent/)'s self-test mode need no key at all.
 
 ## Contents
 
-The main loop is finished in the first note and barely changes afterwards; every mechanism extends around it. s01–s12 build up a complete, usable agent step by step; s13 onward covers boundary concerns a real coding agent has to handle: permissions, provider compatibility, tool disclosure, multi-model collaboration, self-review. Every note follows the same structure: problem → solution → run it → implementation → exercises → comparison with the real product.
+s01–s12 build a complete, usable agent from scratch — read them in order; s13 onward are boundary problems I ran into (and wrote down) while developing Reina — pick what interests you. Each note ends with a pointer to the corresponding production code in Reina.
 
 | # | Topic | The question it answers |
 |---|---|---|
@@ -68,23 +40,9 @@ The main loop is finished in the first note and barely changes afterwards; every
 | [s15](./s15_tool_disclosure/) | Progressive tool disclosure | Dozens of tools — how do you keep them from filling the context? |
 | [s16](./s16_moa/) | MoA multi-model deliberation | Letting several models deliberate together — is it worth it? |
 | [s17](./s17_self_evolution/) | Self-evolution review loop | Can the agent review its own conversations and distill what it learned into memory and skills? |
+| [s18](./s18_completion_gate/) | Completion gate for autonomous runs | The agent says "done" — why should you believe it? |
+| [s19](./s19_compaction_cache/) | Compaction vs. prompt cache | Compaction inevitably busts the cache — how do you minimize the damage? |
 
-## Comparing with Reina
+---
 
-To see the full production implementation of these mechanisms, compare against the Reina repository:
-
-| Note | Corresponding code in Reina |
-|---|---|
-| s01 · main loop | [`core/engine.ts`](https://github.com/Reina-Agent/Reina/blob/main/packages/core/src/engine.ts) |
-| s03 / s04 · budget & spill | [`core/loop-budget.ts`](https://github.com/Reina-Agent/Reina/blob/main/packages/core/src/loop-budget.ts) |
-| s06 / s07 · compaction & cache | [`compaction.ts`](https://github.com/Reina-Agent/Reina/blob/main/packages/core/src/compaction.ts) · [`engine-prompt.ts`](https://github.com/Reina-Agent/Reina/blob/main/packages/core/src/engine-prompt.ts) |
-| s09 / s11 · subagents & multi-agent | [`subagent/activity.ts`](https://github.com/Reina-Agent/Reina/blob/main/packages/core/src/subagent/activity.ts) · [`subagent/manager.ts`](https://github.com/Reina-Agent/Reina/blob/main/packages/core/src/subagent/manager.ts) |
-| s13 / s14 · permissions & provider compat | [`permissions.ts`](https://github.com/Reina-Agent/Reina/blob/main/packages/core/src/permissions.ts) · [`providers/tool-compat.ts`](https://github.com/Reina-Agent/Reina/blob/main/packages/providers/src/tool-compat.ts) |
-
-## Feedback
-
-If you spot a factual error or a code bug, please open an issue.
-
-## License
-
-Released under the [MIT License](./LICENSE) — © 2026 7-e1even.
+Spotted a factual error or a code bug? Please open an issue. [MIT License](./LICENSE) · © 2026 7-e1even
