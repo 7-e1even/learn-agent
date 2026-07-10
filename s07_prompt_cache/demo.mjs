@@ -3,6 +3,7 @@
 //   实验 A：时间戳写进 system → 缓存在第一行就断
 //   实验 B：system 稳定，时间戳放最后一条用户消息 → 上一轮请求 100% 复用
 //   实验 C：违反 append-only（"好心"截短旧工具输出）→ 断点跳回历史中间
+//   实验 D：浪费计数器 → 只用 provider 的 usage 数字，把每次击穿折成 token 并归因
 //
 // 服务商按"与上次请求逐字节相同的前缀"给缓存价（实际按 token/块粒度对齐，
 // DeepSeek 是 64 token 一块；这里用字符近似，原理相同）。
@@ -97,3 +98,56 @@ const brk = report("第 2↔3 轮", b2, c3);
 console.log(`  断点从请求末尾跳回第 ${brk} 字符（那条工具输出的中间）——`);
 console.log(`  之后的 ${c3.length - brk} 字符全部退回全价。省了几十个字符的上下文，赔掉的是整段后续历史的缓存。`);
 console.log("  真想省：要么当初就别让大输出进历史（s04 输出预算），要么整段压缩换摘要（s06）。");
+
+// ─── 实验 D：浪费计数器——上一轮的 prompt，这一轮本该全是缓存读 ────────────
+// A/B/C 拿着两轮请求的原文对比，能精确指出断点在哪个字节——但那是实验室条件：
+// 生产里你不会留着每轮几十万字符的请求原文。生产里手上只有 provider 每轮
+// 报回的三个数：prompt 总量、缓存读了多少、缓存写了多少。
+// 好在"该命中多少"是可以推的：上一轮整个 prompt 刚被算过一遍，这一轮它的
+// 每个 token 都该是缓存读。差出来的部分就是被重计费的浪费：
+//   miss = min(上一轮 prompt, 这一轮 prompt) - 这一轮缓存读
+// 再看闲置了多久：超过 TTL（Anthropic 默认 5 分钟）是缓存被淘汰（正常损耗）；
+// 没超 TTL 就是前缀被改写了（实验 C 的病，去查 append-only）。
+
+console.log("\n━━━ 实验 D：浪费计数器——只靠 usage 数字，量化每次击穿并归因 ━━━");
+
+const TTL_MS = 5 * 60 * 1000; // 缓存保留时间
+const NOISE = 1024; // 断点/块粒度造成的小额差异，不算浪费
+
+function trackCacheUsage(prev, usage, now) {
+  const reported = usage.cacheRead + usage.cacheWrite > 0;
+  const next = { promptTokens: usage.prompt, at: now, reportedCache: (prev?.reportedCache ?? false) || reported };
+  // 第一轮没有参照；从不报缓存字段的服务商，0 也说明不了什么
+  if (!prev || (!reported && !prev.reportedCache)) return { next };
+  const missed = Math.min(prev.promptTokens, usage.prompt) - usage.cacheRead;
+  if (missed <= NOISE) return { next };
+  const idleMs = now - prev.at;
+  return { next, miss: { missed, idleMs, ttlExpired: idleMs > TTL_MS } };
+}
+
+// 一段会话的 usage 流水（provider 每轮报回的原始数字）：
+const rounds = [
+  { label: "第 1 轮（会话开始）　　　　", gap: 0, prompt: 8200, cacheRead: 0, cacheWrite: 8200 },
+  { label: "第 2 轮（15 秒后）　　　　　", gap: 15e3, prompt: 11400, cacheRead: 8200, cacheWrite: 3200 },
+  { label: "第 3 轮（20 秒后）　　　　　", gap: 20e3, prompt: 14100, cacheRead: 11400, cacheWrite: 2700 },
+  { label: "第 4 轮（用户开会，38 分钟后）", gap: 38 * 60e3, prompt: 16300, cacheRead: 0, cacheWrite: 16300 },
+  { label: "第 5 轮（10 秒后）　　　　　", gap: 10e3, prompt: 18000, cacheRead: 16300, cacheWrite: 1700 },
+  { label: "第 6 轮（12 秒后，有人截短了老工具输出）", gap: 12e3, prompt: 17600, cacheRead: 5100, cacheWrite: 12500 },
+];
+
+let state, now = 0, waste = 0, misses = 0;
+for (const r of rounds) {
+  now += r.gap;
+  const { next, miss } = trackCacheUsage(state, r, now);
+  state = next;
+  if (!miss) { console.log(`  ${r.label}：✓ 正常`); continue; }
+  waste += miss.missed; misses++;
+  const idle = miss.idleMs >= 60e3 ? `${Math.round(miss.idleMs / 60e3)} 分钟` : `${Math.round(miss.idleMs / 1e3)} 秒`;
+  const verdict = miss.ttlExpired
+    ? "闲置超过 TTL → 缓存被服务商淘汰（正常损耗，人回来了它就回来）"
+    : "TTL 没过 → 前缀被改写了！去查 append-only（实验 C 的病）";
+  console.log(`  ${r.label}：✗ 浪费 ${miss.missed} tok · 闲置 ${idle} · ${verdict}`);
+}
+console.log(`  会话累计：浪费 ${waste} tok / ${misses} 次 —— 放到 UI 上就是一行 "Cache waste"。`);
+console.log("  注意第 4 轮和第 6 轮的数字长得几乎一样（cacheRead 掉下去了），");
+console.log("  没有 idle 归因就分不清'正常损耗'和'代码有病'——量化的意义就在这一步。");
