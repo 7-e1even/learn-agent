@@ -3,6 +3,7 @@
 //   场景一：触发判定（信 usage，不信估算）
 //   场景二：切片决策 + 结构化摘要（摘要模型用替身，不调 API）
 //   场景三：摘要调用失败 → 提取式降级，会话不陪葬
+//   场景四：回退/分支后，压缩产物（摘要）是丢是留
 //
 // 运行：node s06_compaction/demo.mjs
 
@@ -107,3 +108,37 @@ console.log(`  摘要调用抛出 429 → 自动降级为提取式摘要（degra
 console.log("  降级摘要节选：");
 for (const line of fallback.summary.split("\n").slice(0, 5)) console.log(`    ${line}`);
 console.log(`    …（共 ${fallback.summary.split("\n").length} 行）`);
+
+// ─── 场景四：回退/分支后，压缩产物是丢是留 ──────────────────────────────
+//
+// 聊天产品迟早要做"撤回 / 从这条消息创建分支"。此时会话有两份历史：
+//   · 完整文字稿 transcript —— 渲染层展示用，从未被压缩
+//   · 模型视图 modelView    —— 场景二压缩后的 [摘要 + 尾部]
+// 压缩后的新消息双写进两份（真实引擎 appendMessage 同款）。
+// 回退时最顺手的实现是"从完整文字稿重建、把摘要当缓存清掉"——坑就在这。
+
+console.log("\n━━━ 场景四：回退/分支后，压缩产物（摘要）是丢是留？ ━━━");
+const followUp = { role: "user", content: "顺手把 parseDate 也支持一下 tz 参数。" };
+const transcript = [...messages, followUp]; // 完整文字稿（回退的裁剪对象）
+const modelView = [...ok.messages, followUp]; // 压缩后的模型视图
+
+const chars = (msgs) => msgs.reduce((n, m) => n + (m.content?.length ?? 0), 0);
+
+// 用户在 followUp 处撤回（分支到它之前）：
+const naiveFork = transcript.slice(0, transcript.indexOf(followUp));
+console.log(`  幼稚分支（丢弃摘要，从文字稿重建）：${naiveFork.length} 条原文，约 ${chars(naiveFork)} 字符`);
+console.log("    → 原文水位和压缩前一样高，下一轮触发判定立刻再压一次：白付一次摘要调用，");
+console.log("      且新摘要 ≠ 旧摘要（保留的细节会洗牌）——用户看到\"从哪回退都触发压缩\"。");
+
+// 正确做法：切点消息在压缩后视图里找得到 ⇒ 摘要只覆盖切点之前的内容 ⇒ 随分支保留
+const cut = modelView.indexOf(followUp);
+const reuseFork = modelView.slice(0, cut);
+console.log(`  复用分支（裁剪压缩后视图）：${reuseFork.length} 条，约 ${chars(reuseFork)} 字符（[0] 仍是摘要消息）`);
+console.log("    → 落在\"摘要 + 尾部\"水位，零额外压缩。");
+
+// 反例：撤回进被压缩区（比如回到最早那条 user）——切点消息在 modelView 里找不到
+const earliest = messages[0];
+console.log(`  反例：回退到第 0 条（"${earliest.content.slice(0, 18)}…"）：`);
+console.log(`    它在压缩后视图里${modelView.includes(earliest) ? "找得到" : "找不到"} ⇒ 旧摘要概括了刚被撤回的"未来"，`);
+console.log("    复用会把撤回的内容从摘要里泄漏回去 ⇒ 这种情况才丢弃摘要、用原文重建。");
+console.log("  判据一句话：切点消息在压缩后视图里找得到就保留摘要并裁剪视图；找不到才重建。");

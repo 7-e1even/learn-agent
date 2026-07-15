@@ -26,7 +26,7 @@
 node s06_compaction/demo.mjs
 ```
 
-三个场景：触发判定、切片决策、摘要失败降级。
+四个场景：触发判定、切片决策、摘要失败降级、回退/分支后压缩产物的去留。
 
 接上真实模型：
 
@@ -129,6 +129,25 @@ try {
 
 有损的记忆也比崩溃的会话好。
 
+### ⑤ 回退与分支：压缩产物随切点走，不是易失缓存
+
+聊天产品迟早要做"撤回 / 从这条消息创建分支"。此时会话有两份历史：完整文字稿（渲染层展示用，从未被压缩）和模型视图（压缩后的 [摘要 + 尾部]，新消息双写进两份）。回退最顺手的实现，是从完整文字稿重建、把摘要当派生缓存清掉——反正超阈值还会再压。这个"反正"就是坑：会话长到压缩过，裁到切点的**原文**几乎必然仍超阈值，于是每次回退/分支都白付一次摘要调用，用户看到的是"从哪回退都触发压缩"。更隐蔽的是重摘要不幂等：新摘要保留的细节和旧摘要不同，回退一次，agent 的记忆就洗牌一次。
+
+判据只有一句话：**切点消息在压缩后视图里找得到 ⇒ 旧摘要只覆盖切点之前的内容 ⇒ 摘要随分支保留，把压缩后视图按切点裁剪即可；找不到（撤回进了被压缩区）⇒ 旧摘要概括了刚被撤回的"未来"，复用会把撤回的内容泄漏回去 ⇒ 这种情况才丢弃摘要、用原文重建**：
+
+```js
+const cut = modelView.findIndex((m) => m.id === cutMessageId);
+if (cut >= 0) {
+  branch.modelView = modelView.slice(0, cut);  // 摘要在 [0]，天然保留
+  branch.summary = session.summary;            // 高频路径：零额外压缩
+} else {
+  branch.modelView = undefined;                // 低频路径：原文重建，
+  branch.summary = undefined;                  // 下轮按需重新压缩
+}
+```
+
+前者是高频路径——用户几乎总是撤回最近几条；后者才需要付重摘要的钱。值得一提 codex 的架构让这条判据不需要写出来：它的 fork 是对持久化事件流做前缀截断，而压缩本身就是流里的一条 `Compacted` 事件（带着替换历史）——切点在它之后，它自然留在前缀里；切点在它之前，它自然被截掉。快照式的 fork（复制状态对象、清空派生字段）没有这份免费午餐，两条分支都得手写，而且很容易全部写成第二条。
+
 ## 练习
 
 1. 本章每次压缩都从头生成摘要。改成滚动摘要：把上一次的摘要作为输入传给摘要模型，并在 prompt 里加一条"上一份摘要中仍然相关的部分逐字复制，不要改写"。想想为什么"逐字复制"比"合并改写"更重要（提示：和启动消息逐字保留是同一个道理——转述会累积走样）。
@@ -148,6 +167,7 @@ try {
 - **回拉上限是有效窗口的 25%**（`COMPACT_TAIL_USER_ANCHOR_WINDOW_FRACTION`），超限时靠摘要里的逐字引用段兜底——和本章 `maxAnchorChars` 同构。
 - **摘要 prompt 是 9 个栏目**（Primary Request and Intent / Errors and Fixes / All user messages / Current Work / Next Step…），要求先写 `<analysis>` 草稿再输出 `<summary>`，且用 prompt 前后双重围栏禁止工具调用——因为部分 OpenAI 兼容端点会无视 `tools: []` 照样发起工具调用。
 - **被压掉的历史没有消失**：全文落盘到 `.reina/conversation_history/<sessionId>.md`，摘要消息里附路径指针，模型需要旧细节时可以自己去读——这是 s04"无损溢出"思想在压缩上的复用。
+- **决定⑤是 Reina 真实修过的坑**（2026-07）：`forkToMessage`（创建分支）和 `truncateFromMessageIndex`（撤回/删除消息）最初都无条件丢弃 `modelMessages/summary/compactBoundaries`，表现正是"从哪回退都再压一次"；修复后用同一句判据（切点消息是否还在压缩后视图里）决定复用还是重建。codex 侧的对应物：`Compacted` 检查点是 rollout 流的一等公民，重建从最新存活检查点的 `replacement_history` 起步（`rollout_reconstruction.rs`），且有集成测试逐字断言 fork 后的请求仍含压缩摘要（`compact_resume_fork.rs` —— "after-fork user texts should preserve compacted user history prefix"）。
 
 Claude Code 的行为也可以观察到：上下文快满时状态栏出现 "Context left until auto-compact: 8%"，压缩后它对之前任务的记忆变成摘要形式——但最初的任务指令还在，是同一套机制。
 
