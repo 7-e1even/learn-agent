@@ -26,3 +26,4 @@
 * [s17 · 自进化复盘环](s17_self_evolution/README.md)
 * [s18 · 自主任务的完成门](s18_completion_gate/README.md)
 * [s19 · 压缩与缓存的冲突](s19_compaction_cache/README.md)
+* [s20 · 自动长期记忆](s20_memory_dream/README.md)

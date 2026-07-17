@@ -97,5 +97,5 @@ node s19_compaction_cache/demo.mjs
 
 ---
 
-| [← 上一章：自主任务的完成门](../s18_completion_gate/README.md) | [目录](../README.md) | 下一章：（连载中） |
+| [← 上一章：自主任务的完成门](../s18_completion_gate/README.md) | [目录](../README.md) | [下一章：自动长期记忆 →](../s20_memory_dream/README.md) |
 |---|---|---|

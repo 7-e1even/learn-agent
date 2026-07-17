@@ -42,6 +42,7 @@ s01–s12 build a complete, usable agent from scratch — read them in order; s1
 | [s17](./s17_self_evolution/) | Self-evolution review loop | Can the agent review its own conversations and distill what it learned into memory and skills? |
 | [s18](./s18_completion_gate/) | Completion gate for autonomous runs | The agent says "done" — why should you believe it? |
 | [s19](./s19_compaction_cache/) | Compaction vs. prompt cache | Compaction inevitably busts the cache — how do you minimize the damage? |
+| [s20](./s20_memory_dream/) | Automatic long-term memory | Distilling what's worth remembering across projects — without burning tokens or hoarding junk |
 
 ---
 
